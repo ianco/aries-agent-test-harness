@@ -5,6 +5,14 @@ storage = {}
 storage_lock = threading.Lock()
 
 
+def clear_resource():
+    storage_lock.acquire()
+    try:
+        storage = {}
+    finally:
+        storage_lock.release()
+
+
 def store_resource(data_id, data_type, data):
     storage_lock.acquire()
     try:

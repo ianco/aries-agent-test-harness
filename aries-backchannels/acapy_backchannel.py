@@ -21,7 +21,7 @@ from aiohttp import (
 
 from agent_backchannel import AgentBackchannel, default_genesis_txns, RUN_MODE, START_TIMEOUT
 from utils import require_indy, flatten, log_json, log_msg, log_timer, output_reader, prompt_loop
-from storage import store_resource, get_resource, delete_resource, push_resource, pop_resource
+from storage import store_resource, get_resource, delete_resource, push_resource, pop_resource, clear_resource
 
 
 LOGGER = logging.getLogger(__name__)
@@ -42,6 +42,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
     def __init__(
         self, 
         ident: str,
+        backchannel_port: int, 
         http_port: int,
         admin_port: int,
         genesis_data: str = None,
@@ -49,11 +50,14 @@ class AcaPyAgentBackchannel(AgentBackchannel):
     ):
         super().__init__(
             ident,
+            backchannel_port,
             http_port,
             admin_port,
             genesis_data,
             params
         )
+        # endpoint exposed by ngrok
+        #self.endpoint = "https://9f3a6083.ngrok.io"
 
     def get_agent_args(self):
         result = [
@@ -107,6 +111,44 @@ class AcaPyAgentBackchannel(AgentBackchannel):
         self.webhook_site = web.TCPSite(runner, "0.0.0.0", webhook_port)
         await self.webhook_site.start()
         print("Listening to web_hooks on port", webhook_port)
+
+    async def start_agent(self):
+        log_msg("aca-py start_agent()")
+
+        # start aca-py agent sub-process and listen for web hooks
+        await self.listen_webhooks(self.backchannel_port+3)
+        await self.register_did()
+
+        await self.start_process()
+
+        self.agent_running = True
+
+        log_msg(200, '{"status": "active"}')
+        return (200, '{"status": "active"}')
+
+    async def stop_agent(self):
+        log_msg("aca-py stop_agent()")
+
+        # shutdown agent
+        await self.terminate()
+        clear_resource()
+
+        self.agent_running = False
+        
+        log_msg(200, '{"status": "inactive"}')
+        return (200, '{"status": "inactive"}')
+
+    async def agent_status(self):
+        """
+        Override with agent-specific behaviour
+        """
+        if self.agent_running:
+            try:
+                await self.detect_process()
+                return (200, '{"status": "active"}')
+            except:
+                pass
+        return (200, '{"status": "inactive"}')
 
     async def _receive_webhook(self, request: ClientRequest):
         topic = request.match_info["topic"]
@@ -371,17 +413,16 @@ async def main(start_port: int, show_timing: bool = False):
 
     try:
         agent = AcaPyAgentBackchannel(
-            "aca-py", start_port+1, start_port+2, genesis_data=genesis
+            "aca-py", start_port, start_port+1, start_port+2, genesis_data=genesis
         )
 
         # start backchannel (common across all types of agents)
         await agent.listen_backchannel(start_port)
 
         # start aca-py agent sub-process and listen for web hooks
-        await agent.listen_webhooks(start_port+3)
-        await agent.register_did()
-
-        await agent.start_process()
+        #await agent.listen_webhooks(start_port+3)
+        #await agent.register_did()
+        #await agent.start_process()
 
         # now wait ...
         async for option in prompt_loop(

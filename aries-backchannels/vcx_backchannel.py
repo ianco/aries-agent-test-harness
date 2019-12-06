@@ -22,7 +22,7 @@ from aiohttp import (
 
 from agent_backchannel import AgentBackchannel, default_genesis_txns, RUN_MODE, START_TIMEOUT
 from utils import require_indy, flatten, log_json, log_msg, log_timer, output_reader, prompt_loop, file_ext, create_uuid
-from storage import store_resource, get_resource, delete_resource, pop_resource, get_resources
+from storage import store_resource, get_resource, delete_resource, pop_resource, get_resources, clear_resource
 
 from vcx.api.connection import Connection
 from vcx.api.credential_def import CredentialDef
@@ -84,6 +84,7 @@ class VCXAgentBackchannel(AgentBackchannel):
     def __init__(
         self, 
         ident: str,
+        backchannel_port: int, 
         http_port: int,
         admin_port: int,
         genesis_data: str = None,
@@ -91,27 +92,47 @@ class VCXAgentBackchannel(AgentBackchannel):
     ):
         super().__init__(
             ident,
+            backchannel_port,
             http_port,
             admin_port,
             genesis_data,
             params
         )
+        self.config = None
+
+    async def start_agent(self):
+        # start VCX agent sub-process 
+        await self.start_vcx()
+
+        self.agent_running = True
+
+        return (200, "")
+
+    async def stop_agent(self):
+        await self.stop_vcx()
+
+        self.agent_running = False
+        
+        return (200, "")
 
     async def start_vcx(self):
-        payment_plugin = cdll.LoadLibrary('libnullpay' + file_ext())
-        payment_plugin.nullpay_init()
+        if not self.config:
+            payment_plugin = cdll.LoadLibrary('libnullpay' + file_ext())
+            payment_plugin.nullpay_init()
 
-        print("Provision an agent and wallet, get back configuration details")
-        config = await vcx_agent_provision(json.dumps(provisionConfig))
-        config = json.loads(config)
-        # Set some additional configuration options specific to faber
-        config['institution_name'] = 'Faber'
-        config['institution_logo_url'] = 'http://robohash.org/234'
-        config['genesis_path'] = 'local-genesis.txt'
+            print("Provision an agent and wallet, get back configuration details")
+            config = await vcx_agent_provision(json.dumps(provisionConfig))
+            self.config = json.loads(config)
+            # Set some additional configuration options specific to faber
+            self.config['institution_name'] = 'Faber'
+            self.config['institution_logo_url'] = 'http://robohash.org/234'
+            self.config['genesis_path'] = 'local-genesis.txt'
 
         print("Initialize libvcx with new configuration")
         await vcx_init_with_config(json.dumps(config))
 
+    async def stop_vcx(self):
+        clear_resource()
         pass
 
     async def make_agent_POST_request(
@@ -235,16 +256,16 @@ async def main(start_port: int, show_timing: bool = False):
 
     try:
         agent = VCXAgentBackchannel(
-            "vcx", start_port+1, start_port+2, genesis_data=genesis
+            "vcx", start_port, start_port+1, start_port+2, genesis_data=genesis
         )
 
         # start backchannel (common across all types of agents)
         await agent.listen_backchannel(start_port)
 
-        # TODO start VCX agent sub-process 
         await agent.register_did()
 
-        await agent.start_vcx()
+        # start VCX agent sub-process 
+        #await agent.start_vcx()
 
         # now wait ...
         async for option in prompt_loop(
@@ -257,7 +278,7 @@ async def main(start_port: int, show_timing: bool = False):
         terminated = True
         try:
             if agent:
-                await agent.terminate()
+                await agent.stop_vcx()
         except Exception:
             LOGGER.exception("Error terminating agent:")
             terminated = False

@@ -54,6 +54,24 @@ async def make_agent_backchannel_request(
         return (resp_status, resp_text)
 
 
+def agent_backchannel_start_agent(url) -> (int, str):
+    backchannel_url = url + "/backchannel/command/start-agent/"
+    (resp_status, resp_text) = run_coroutine_with_kwargs(make_agent_backchannel_request, "POST", backchannel_url)
+    return (resp_status, resp_text)
+    
+
+def agent_backchannel_stop_agent(url) -> (int, str):
+    backchannel_url = url + "/backchannel/command/stop-agent/"
+    (resp_status, resp_text) = run_coroutine_with_kwargs(make_agent_backchannel_request, "POST", backchannel_url)
+    return (resp_status, resp_text)
+
+    
+def agent_backchannel_agent_status(url) -> (int, str):
+    backchannel_url = url + "/backchannel/command/agent-status/"
+    (resp_status, resp_text) = run_coroutine_with_kwargs(make_agent_backchannel_request, "GET", backchannel_url)
+    return (resp_status, resp_text)
+
+    
 def agent_backchannel_GET(url, topic, operation=None, id=None, data=None) -> (int, str):
     agent_url = url + topic + "/"
     if id:

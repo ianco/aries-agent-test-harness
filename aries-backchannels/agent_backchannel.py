@@ -82,12 +82,14 @@ class AgentBackchannel:
     def __init__(
         self, 
         ident: str,
+        backchannel_port: int,
         http_port: int,
         admin_port: int,
         genesis_data: str = None,
         params: dict = {}
     ):
         self.ident = ident
+        self.backchannel_port = backchannel_port
         self.http_port = http_port
         self.admin_port = admin_port
         self.genesis_data = genesis_data
@@ -114,8 +116,17 @@ class AgentBackchannel:
         self.did = None
         self.postgres = False
 
+        self.agent_running = False
+
         self.client_session: ClientSession = ClientSession()
 
+
+    """
+    Setup the backchannel REST services and handlers:
+    - REST service to start and stop the agent
+    - REST service to query backchannel status
+    - REST services to interact with the agent (send commands and request status/state)
+    """
     async def listen_backchannel(self, backchannel_port):
         """ 
         Setup the routes to allow the test harness to send commands to and get replies
@@ -185,19 +196,55 @@ class AgentBackchannel:
         self.operations = read_operations(operations_str)
 
         app = web.Application()
-        app.add_routes([web.post("/agent/command/{topic}/", self._post_command_backchannel)])
-        app.add_routes([web.get("/agent/command/{topic}/", self._get_command_backchannel)])
-        app.add_routes([web.get("/agent/command/{topic}/{id}", self._get_command_backchannel)])
-        app.add_routes([web.get("/agent/response/{topic}/", self._get_response_backchannel)])
-        app.add_routes([web.get("/agent/response/{topic}/{id}", self._get_response_backchannel)])
-        app.add_routes([web.post("/agent/reply/{topic}/", self._post_reply_backchannel)])
+        app.add_routes([web.post("/backchannel/command/{topic}/", self._post_backchannel_command_backchannel)])
+        app.add_routes([web.get("/backchannel/command/{topic}/", self._get_backchannel_command_backchannel)])
+        app.add_routes([web.get("/backchannel/command/{topic}/{id}", self._get_backchannel_command_backchannel)])
+
+        app.add_routes([web.post("/agent/command/{topic}/", self._post_agent_command_backchannel)])
+        app.add_routes([web.get("/agent/command/{topic}/", self._get_agent_command_backchannel)])
+        app.add_routes([web.get("/agent/command/{topic}/{id}", self._get_agent_command_backchannel)])
+
+        app.add_routes([web.get("/agent/response/{topic}/", self._get_agent_response_backchannel)])
+        app.add_routes([web.get("/agent/response/{topic}/{id}", self._get_agent_response_backchannel)])
+        app.add_routes([web.post("/agent/reply/{topic}/", self._post_agent_reply_backchannel)])
+
         runner = web.AppRunner(app)
         await runner.setup()
         self.backchannel_site = web.TCPSite(runner, "0.0.0.0", backchannel_port)
         await self.backchannel_site.start()
         print("Listening to backchannel on port", backchannel_port)
 
-    def match_operation(self, topic, method, payload=None, rec_id=None):
+
+    async def _post_backchannel_command_backchannel(self, request: ClientRequest):
+        topic = request.match_info["topic"]
+        log_msg("POST backchannel command", topic)
+
+        if topic == "start-agent":
+            if self.agent_running:
+                return web.Response(body='500: Agent already running\n\n'.encode('utf8'), status=500)
+            (resp_status, resp_text) = await self.start_agent()
+            return web.Response(text=resp_text, status=resp_status)
+        elif topic == "stop-agent":
+            if not self.agent_running:
+                return web.Response(body='500: Agent not running\n\n'.encode('utf8'), status=500)
+            (resp_status, resp_text) = await self.stop_agent()
+            return web.Response(text=resp_text, status=resp_status)
+
+        return web.Response(body='404: Not Found\n\n'.encode('utf8'), status=404)
+
+
+    async def _get_backchannel_command_backchannel(self, request: ClientRequest):
+        topic = request.match_info["topic"]
+        log_msg("GET backchannel command", topic)
+
+        if topic == "agent-status":
+            (resp_status, resp_text) = await self.agent_status()
+            return web.Response(text=resp_text, status=resp_status)
+
+        return web.Response(body='404: Not Found\n\n'.encode('utf8'), status=404)
+
+
+    def match_agent_operation(self, topic, method, payload=None, rec_id=None):
         """
         Determine which agent operation we are trying to invoke
         """
@@ -220,14 +267,17 @@ class AgentBackchannel:
 
         return None
 
-    async def _post_command_backchannel(self, request: ClientRequest):
+    async def _post_agent_command_backchannel(self, request: ClientRequest):
         """
         Post a POST command to the agent.
         """
+        if not self.agent_running:
+            return web.Response(body='500: Agent not running\n\n'.encode('utf8'), status=500)
+            
         topic = request.match_info["topic"]
         payload = await request.json()
 
-        operation = self.match_operation(topic, "POST", payload=payload)
+        operation = self.match_agent_operation(topic, "POST", payload=payload)
         if operation:
             if "data" in payload:
                 data = payload["data"]
@@ -244,17 +294,20 @@ class AgentBackchannel:
 
         return web.Response(body='404: Not Found\n\n'.encode('utf8'), status=404)
 
-    async def _get_command_backchannel(self, request: ClientRequest):
+    async def _get_agent_command_backchannel(self, request: ClientRequest):
         """
         Post a GET command to the agent.
         """
+        if not self.agent_running:
+            return web.Response(body='500: Agent not running\n\n'.encode('utf8'), status=500)
+            
         topic = request.match_info["topic"]
         if "id" in request.match_info:
             rec_id = request.match_info["id"]
         else:
             rec_id = None
 
-        operation = self.match_operation(topic, "GET", rec_id=rec_id)
+        operation = self.match_agent_operation(topic, "GET", rec_id=rec_id)
         if operation:
             (resp_status, resp_text) = await self.make_agent_GET_request(operation, rec_id=rec_id)
 
@@ -262,10 +315,13 @@ class AgentBackchannel:
 
         return web.Response(body='404: Not Found\n\n'.encode('utf8'), status=404)
 
-    async def _get_response_backchannel(self, request: ClientRequest):
+    async def _get_agent_response_backchannel(self, request: ClientRequest):
         """
         Get a response from the (remote) agent.
         """
+        if not self.agent_running:
+            return web.Response(body='500: Agent not running\n\n'.encode('utf8'), status=500)
+            
         topic = request.match_info["topic"]
         if "id" in request.match_info:
             rec_id = request.match_info["id"]
@@ -276,11 +332,39 @@ class AgentBackchannel:
 
         return web.Response(text=resp_text, status=resp_status)
 
-    async def _post_reply_backchannel(self, request: ClientRequest):
+    async def _post_agent_reply_backchannel(self, request: ClientRequest):
         """
         Reply to a response from the (remote) agent.
         """
+        if not self.agent_running:
+            return web.Response(body='500: Agent not running\n\n'.encode('utf8'), status=500)
+            
         return web.Response(text="")
+
+    """
+    Agent-specific backchannel hooks.
+    Override these methods for an agent-specific backchannel implementation.
+    """
+    async def start_agent(self):
+        """
+        Override with agent-specific behaviour
+        """
+        raise NotImplementedError
+
+    async def stop_agent(self):
+        """
+        Override with agent-specific behaviour
+        """
+        raise NotImplementedError
+
+    async def agent_status(self):
+        """
+        Override with agent-specific behaviour
+        """
+        if self.agent_running:
+            return (200, {"status": "active"})
+        else:
+            return (200, {"status": "inactive"})
 
     async def make_agent_POST_request(
         self, op, rec_id=None, data=None, text=False, params=None
@@ -309,6 +393,9 @@ class AgentBackchannel:
     def log(self, msg):
         print(msg)
 
+    """
+    Other utility methods that can be used by agent backchannel implementations.
+    """
     def handle_output(self, *output, source: str = None, **kwargs):
         end = "" if source else "\n"
         if source == "stderr":

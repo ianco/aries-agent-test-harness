@@ -1,10 +1,30 @@
 from behave import *
 import json
-from agent_backchannel_client import agent_backchannel_GET, agent_backchannel_POST, connection_status
+from agent_backchannel_client import agent_backchannel_GET, agent_backchannel_POST, connection_status, agent_backchannel_start_agent, agent_backchannel_stop_agent, agent_backchannel_agent_status
 
+
+@given('"{agent}" is defined and running')
+def step_impl(context, agent):
+    agent_url = context.config.userdata.get(agent)
+    assert agent_url is not None and 0 < len(agent_url)
+
+    (resp_status, resp_text) = agent_backchannel_start_agent(agent_url)
+    assert resp_status == 200
+
+    (resp_status, resp_text) = agent_backchannel_agent_status(agent_url)
+    assert resp_status == 200
+
+    resp_json = json.loads(resp_text)
+    assert resp_json["status"] == "active"
+
+    context.running_agents[agent] = agent_url
 
 @given('we have two agents "{inviter}" and "{invitee}"')
 def step_impl(context, inviter, invitee):
+    context.execute_steps(u'''
+       Given "''' + inviter + '''" is defined and running
+         And "''' + invitee + '''" is defined and running
+    ''')
     inviter_url = context.config.userdata.get(inviter)
     invitee_url = context.config.userdata.get(invitee)
     assert inviter_url is not None and 0 < len(inviter_url)
