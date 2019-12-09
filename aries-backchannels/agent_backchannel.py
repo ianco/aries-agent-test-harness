@@ -221,9 +221,15 @@ class AgentBackchannel:
 
         if topic == "start-agent":
             if self.agent_running:
+                log_msg("Agent already running")
                 return web.Response(body='500: Agent already running\n\n'.encode('utf8'), status=500)
-            (resp_status, resp_text) = await self.start_agent()
-            return web.Response(text=resp_text, status=resp_status)
+            log_msg("call self.start_agent()")
+            try:
+                (resp_status, resp_text) = await self.start_agent()
+                return web.Response(text=resp_text, status=resp_status)
+            except Exception as e:
+                log_msg(e)
+                raise e
         elif topic == "stop-agent":
             if not self.agent_running:
                 return web.Response(body='500: Agent not running\n\n'.encode('utf8'), status=500)
@@ -361,10 +367,7 @@ class AgentBackchannel:
         """
         Override with agent-specific behaviour
         """
-        if self.agent_running:
-            return (200, {"status": "active"})
-        else:
-            return (200, {"status": "inactive"})
+        raise NotImplementedError
 
     async def make_agent_POST_request(
         self, op, rec_id=None, data=None, text=False, params=None

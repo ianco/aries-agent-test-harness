@@ -139,9 +139,6 @@ class AcaPyAgentBackchannel(AgentBackchannel):
         return (200, '{"status": "inactive"}')
 
     async def agent_status(self):
-        """
-        Override with agent-specific behaviour
-        """
         if self.agent_running:
             try:
                 await self.detect_process()
@@ -419,10 +416,7 @@ async def main(start_port: int, show_timing: bool = False):
         # start backchannel (common across all types of agents)
         await agent.listen_backchannel(start_port)
 
-        # start aca-py agent sub-process and listen for web hooks
-        #await agent.listen_webhooks(start_port+3)
-        #await agent.register_did()
-        #await agent.start_process()
+        await agent.start_agent()
 
         # now wait ...
         async for option in prompt_loop(

@@ -8,9 +8,6 @@ def step_impl(context, agent):
     agent_url = context.config.userdata.get(agent)
     assert agent_url is not None and 0 < len(agent_url)
 
-    (resp_status, resp_text) = agent_backchannel_start_agent(agent_url)
-    assert resp_status == 200
-
     (resp_status, resp_text) = agent_backchannel_agent_status(agent_url)
     assert resp_status == 200
 

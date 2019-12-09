@@ -101,19 +101,30 @@ class VCXAgentBackchannel(AgentBackchannel):
         self.config = None
 
     async def start_agent(self):
+        log_msg("vcx start_agent()")
+
         # start VCX agent sub-process 
         await self.start_vcx()
 
         self.agent_running = True
 
-        return (200, "")
+        log_msg(200, '{"status": "active"}')
+        return (200, '{"status": "active"}')
 
     async def stop_agent(self):
         await self.stop_vcx()
 
         self.agent_running = False
         
-        return (200, "")
+        log_msg(200, '{"status": "inactive"}')
+        return (200, '{"status": "inactive"}')
+
+    async def agent_status(self):
+        await asyncio.sleep(0.1)
+        if self.agent_running:
+            return (200, '{"status": "active"}')
+        else:
+            return (200, '{"status": "inactive"}')
 
     async def start_vcx(self):
         if not self.config:
@@ -129,7 +140,7 @@ class VCXAgentBackchannel(AgentBackchannel):
             self.config['genesis_path'] = 'local-genesis.txt'
 
         print("Initialize libvcx with new configuration")
-        await vcx_init_with_config(json.dumps(config))
+        await vcx_init_with_config(json.dumps(self.config))
 
     async def stop_vcx(self):
         clear_resource()
@@ -264,8 +275,7 @@ async def main(start_port: int, show_timing: bool = False):
 
         await agent.register_did()
 
-        # start VCX agent sub-process 
-        #await agent.start_vcx()
+        await agent.start_agent()
 
         # now wait ...
         async for option in prompt_loop(
