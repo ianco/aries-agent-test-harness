@@ -83,38 +83,19 @@ class AgentBackchannel:
         self, 
         ident: str,
         backchannel_port: int,
-        http_port: int,
-        admin_port: int,
         genesis_data: str = None,
         params: dict = {}
     ):
         self.ident = ident
         self.backchannel_port = backchannel_port
-        self.http_port = http_port
-        self.admin_port = admin_port
         self.genesis_data = genesis_data
         self.params = params
-        rand_name = str(random.randint(100_000, 999_999))
-        self.seed = ("my_seed_000000000000000000000000" + rand_name)[-32:]
 
         self.internal_host = DEFAULT_INTERNAL_HOST
         self.external_host = DEFAULT_EXTERNAL_HOST
         self.label = ident
 
-        if RUN_MODE == "pwd":
-            self.endpoint = f"http://{self.external_host}".replace(
-                "{PORT}", str(http_port)
-            )
-        else:
-            self.endpoint = f"http://{self.external_host}:{http_port}"
-        self.admin_url = f"http://{self.internal_host}:{admin_port}"
-
-        self.storage_type = "indy"
-        self.wallet_type = "indy"
-        self.wallet_name = self.ident.lower().replace(" ", "") + rand_name
-        self.wallet_key = self.ident + rand_name
         self.did = None
-        self.postgres = False
 
         self.agent_running = False
 

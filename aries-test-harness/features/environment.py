@@ -16,4 +16,3 @@ def after_scenario(context, scenario):
             agent_url = context.running_agents[agent]
             #(resp_status, resp_text) = agent_backchannel_stop_agent(agent_url)
     context.running_agents = None
-    

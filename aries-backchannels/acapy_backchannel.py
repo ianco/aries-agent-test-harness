@@ -1,5 +1,6 @@
 import asyncio
 import asyncpg
+import threading
 import functools
 import json
 import logging
@@ -20,7 +21,7 @@ from aiohttp import (
 )
 
 from agent_backchannel import AgentBackchannel, default_genesis_txns, RUN_MODE, START_TIMEOUT
-from utils import require_indy, flatten, log_json, log_msg, log_timer, output_reader, prompt_loop
+from utils import require_indy, flatten, log_json, log_msg, log_timer, output_reader, stderr_reader, prompt_loop
 from storage import store_resource, get_resource, delete_resource, push_resource, pop_resource, clear_resource
 
 
@@ -51,11 +52,29 @@ class AcaPyAgentBackchannel(AgentBackchannel):
         super().__init__(
             ident,
             backchannel_port,
-            http_port,
-            admin_port,
             genesis_data,
             params
         )
+        self.http_port = http_port
+        self.admin_port = admin_port
+
+        if RUN_MODE == "pwd":
+            self.endpoint = f"http://{self.external_host}".replace(
+                "{PORT}", str(http_port)
+            )
+        else:
+            self.endpoint = f"http://{self.external_host}:{http_port}"
+        self.admin_url = f"http://{self.internal_host}:{admin_port}"
+
+        rand_name = str(random.randint(100_000, 999_999))
+        self.seed = ("my_seed_000000000000000000000000" + rand_name)[-32:]
+
+        self.storage_type = "indy"
+        self.wallet_type = "indy"
+        self.wallet_name = self.ident.lower().replace(" ", "") + rand_name
+        self.wallet_key = self.ident + rand_name
+        self.postgres = False
+
         # endpoint exposed by ngrok
         #self.endpoint = "https://9f3a6083.ngrok.io"
 
@@ -299,18 +318,11 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             env=env,
             encoding="utf-8",
         )
-        loop.run_in_executor(
-            None,
-            output_reader,
-            proc.stdout,
-            functools.partial(self.handle_output, source="stdout"),
-        )
-        loop.run_in_executor(
-            None,
-            output_reader,
-            proc.stderr,
-            functools.partial(self.handle_output, source="stderr"),
-        )
+        sleep(0.5)
+        t1 = threading.Thread(target=output_reader, args=(proc,))
+        t1.start()
+        t2 = threading.Thread(target=stderr_reader, args=(proc,))
+        t2.start()
         return proc
 
     def get_process_args(self, bin_path: str = None):
@@ -394,7 +406,6 @@ class AcaPyAgentBackchannel(AgentBackchannel):
         loop = asyncio.get_event_loop()
         if self.proc:
             await loop.run_in_executor(None, self._terminate)
-        await self.client_session.close()
         if self.webhook_site:
             await self.webhook_site.stop()
 
@@ -418,18 +429,21 @@ async def main(start_port: int, show_timing: bool = False):
 
         await agent.start_agent()
 
-        # now wait ...
-        async for option in prompt_loop(
-            "(X) Exit? [X] "
-        ):
-            if option is None or option in "xX":
-                break
+        print("Running; ^C to break ...")
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            pass
 
+    except Exception as e:
+        print(e)
     finally:
+        print("Shutting down ...")
         terminated = True
         try:
             if agent:
-                await agent.terminate()
+                await agent.stop_agent()
         except Exception:
             LOGGER.exception("Error terminating agent:")
             terminated = False

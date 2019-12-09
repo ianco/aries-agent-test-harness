@@ -85,16 +85,12 @@ class VCXAgentBackchannel(AgentBackchannel):
         self, 
         ident: str,
         backchannel_port: int, 
-        http_port: int,
-        admin_port: int,
         genesis_data: str = None,
         params: dict = {}
     ):
         super().__init__(
             ident,
             backchannel_port,
-            http_port,
-            admin_port,
             genesis_data,
             params
         )
@@ -267,7 +263,7 @@ async def main(start_port: int, show_timing: bool = False):
 
     try:
         agent = VCXAgentBackchannel(
-            "vcx", start_port, start_port+1, start_port+2, genesis_data=genesis
+            "vcx", start_port, genesis_data=genesis
         )
 
         # start backchannel (common across all types of agents)
@@ -277,12 +273,12 @@ async def main(start_port: int, show_timing: bool = False):
 
         await agent.start_agent()
 
-        # now wait ...
-        async for option in prompt_loop(
-            "(X) Exit? [X] "
-        ):
-            if option is None or option in "xX":
-                break
+        print("Running; ^C to break ...")
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            pass
 
     finally:
         terminated = True

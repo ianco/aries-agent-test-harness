@@ -6,6 +6,7 @@ import io
 import csv
 import platform
 import uuid
+import threading
 
 from timeit import default_timer
 
@@ -23,6 +24,28 @@ from prompt_toolkit.formatted_text import FormattedText, PygmentsTokens
 
 
 COLORIZE = bool(os.getenv("COLORIZE", True))
+
+s_print_lock = threading.Lock()
+
+
+def s_print(*a, **b):
+    """Thread safe print function"""
+    with s_print_lock:
+        print(*a, **b)
+
+
+def output_reader(proc):
+    for line in iter(proc.stdout.readline, b""):
+        if line and 0 < len(line):
+            s_print("got line: {0}".format(line), end="")
+        pass
+
+
+def stderr_reader(proc):
+    for line in iter(proc.stderr.readline, b""):
+        if line and 0 < len(line):
+            s_print("got line: {0}".format(line), end="")
+        pass
 
 
 class PrefixFilter(Filter):
@@ -81,7 +104,8 @@ def print_json(data, label: str = None, prefix: str = None, indent: int = 2):
         data = json.loads(data)
     data = json.dumps(data, indent=2)
     prefix_str = prefix or ""
-    print_lexer(data, JsonLdLexer(), label=label, prefix=prefix_str, indent=indent)
+    #print_lexer(data, JsonLdLexer(), label=label, prefix=prefix_str, indent=indent)
+    print(data)
 
 
 def print_formatted(*args, **kwargs):
@@ -114,7 +138,7 @@ def print_ext(
     print(*msg, **kwargs)
 
 
-def output_reader(handle, callback, *args, **kwargs):
+def x_output_reader(handle, callback, *args, **kwargs):
     for line in iter(handle.readline, b""):
         if not line:
             break
@@ -122,7 +146,8 @@ def output_reader(handle, callback, *args, **kwargs):
 
 
 def log_msg(*msg, color="fg:ansimagenta", **kwargs):
-    run_in_terminal(lambda: print_ext(*msg, color=color, **kwargs))
+    #run_in_terminal(lambda: print_ext(*msg, color=color, **kwargs))
+    print(*msg)
 
 
 def log_json(data, **kwargs):
