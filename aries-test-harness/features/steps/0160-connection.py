@@ -36,6 +36,7 @@ def step_impl(context, inviter):
 
     resp_json = json.loads(resp_text)
     context.inviter_invitation = resp_json["invitation"]
+    context.inviter_invitation_url = resp_json["invitation_url"]
     context.inviter_connection_id = resp_json["connection_id"]
 
     # get connection and verify status
@@ -45,7 +46,7 @@ def step_impl(context, inviter):
 def step_impl(context, invitee):
     invitee_url = context.config.userdata.get(invitee)
 
-    data = context.inviter_invitation
+    data = { "invitation": context.inviter_invitation, "invitation_url": context.inviter_invitation_url }
     (resp_status, resp_text) = agent_backchannel_POST(invitee_url + "/agent/command/", "connection", operation="receive-invitation", data=data)
     assert resp_status == 200
 

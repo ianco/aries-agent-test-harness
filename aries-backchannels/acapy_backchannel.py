@@ -82,10 +82,10 @@ class AcaPyAgentBackchannel(AgentBackchannel):
         result = [
             ("--endpoint", self.endpoint),
             ("--label", self.label),
-            #"--auto-ping-connection",
-            #"--auto-accept-invites", 
-            #"--auto-accept-requests", 
-            #"--auto-respond-messages",
+            "--auto-ping-connection",
+            "--auto-accept-invites", 
+            "--auto-accept-requests", 
+            "--auto-respond-messages",
             ("--inbound-transport", "http", "0.0.0.0", str(self.http_port)),
             ("--outbound-transport", "http"),
             ("--admin", "0.0.0.0", str(self.admin_port)),
@@ -136,7 +136,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
 
         # start aca-py agent sub-process and listen for web hooks
         await self.listen_webhooks(self.backchannel_port+3)
-        await self.register_did()
+        await self.register_did(self.seed)
 
         await self.start_process()
 
@@ -239,7 +239,14 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             elif operation == "receive-invitation":
                 agent_operation = "/connections/" + operation
 
-                (resp_status, resp_text) = await self.admin_POST(agent_operation, data=data)
+                if "invitation" in data and 0 < len(data["invitation"]):
+                    invitation = data["invitation"]
+                elif "invitation_url" in data and 0 < len(data["invitation_url"]):
+                    invitation = self.extract_invite_info(data["invitation_url"])
+                else:
+                    return (500, '500: No Invitation Provided\n\n'.encode('utf8'))
+
+                (resp_status, resp_text) = await self.admin_POST(agent_operation, data=invitation)
 
                 return (resp_status, resp_text)
 
@@ -457,7 +464,7 @@ async def main(start_port: int, show_timing: bool = False):
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="Runs a Faber demo agent.")
+    parser = argparse.ArgumentParser(description="Runs an ACA-PY agent backchannel.")
     parser.add_argument(
         "-p",
         "--port",

@@ -12,6 +12,7 @@ from prompt_toolkit.application import run_in_terminal
 from prompt_toolkit.eventloop.defaults import use_asyncio_event_loop
 from prompt_toolkit.patch_stdout import patch_stdout
 from timeit import default_timer
+import base64
 
 import pygments
 from pygments.filter import Filter
@@ -380,6 +381,11 @@ class AgentBackchannel:
     """
     Other utility methods that can be used by agent backchannel implementations.
     """
+    def extract_invite_info(self, url):
+        items = url.split("?c_i=")
+        invite_json = base64.b64decode(items[1])
+        return json.loads(invite_json)
+
     def handle_output(self, *output, source: str = None, **kwargs):
         end = "" if source else "\n"
         if source == "stderr":
@@ -390,12 +396,12 @@ class AgentBackchannel:
             color = None
         log_msg(*output, color=color, prefix=self.prefix_str, end=end, **kwargs)
 
-    async def register_did(self, ledger_url: str = None, alias: str = None):
+    async def register_did(self, seed, ledger_url: str = None, alias: str = None):
         if not ledger_url:
             ledger_url = LEDGER_URL
         if not ledger_url:
             ledger_url = f"http://{self.external_host}:9000"
-        data = {"alias": alias or self.ident, "seed": self.seed, "role": "TRUST_ANCHOR"}
+        data = {"alias": alias or self.ident, "seed": seed, "role": "TRUST_ANCHOR"}
         async with self.client_session.post(
             ledger_url + "/register", json=data
         ) as resp:
