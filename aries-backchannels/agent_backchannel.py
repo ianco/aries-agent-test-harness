@@ -13,6 +13,7 @@ from prompt_toolkit.eventloop.defaults import use_asyncio_event_loop
 from prompt_toolkit.patch_stdout import patch_stdout
 from timeit import default_timer
 import base64
+import urllib.parse
 
 import pygments
 from pygments.filter import Filter
@@ -385,6 +386,9 @@ class AgentBackchannel:
         items = url.split("?c_i=")
         invite_json = base64.b64decode(items[1])
         return json.loads(invite_json)
+    
+    def urlencode_url(self, url):
+        return urllib.parse.quote(url)
 
     def handle_output(self, *output, source: str = None, **kwargs):
         end = "" if source else "\n"

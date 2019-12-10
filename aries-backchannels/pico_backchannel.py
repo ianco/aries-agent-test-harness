@@ -118,8 +118,12 @@ class PicoAgentBackchannel(AgentBackchannel):
 
     async def pico_receive_invitation(self, invitation):
         receive_invite_url = self.pico_url + "/sky/event/" + self.pico_eci + "/event_id/sovrin/new_invitation"
+        print(receive_invite_url)
 
-        (resp_status, resp_text) = await self.admin_GET(create_invite_url)
+        receive_invite_url = receive_invite_url + "?c_i=" + self.urlencode_url(invitation)
+
+        (resp_status, resp_text) = await self.admin_GET(receive_invite_url)
+        print(resp_status, resp_text)
         if resp_status != 200:
             raise Exception("Error receiving invitation")
 
@@ -187,6 +191,8 @@ class PicoAgentBackchannel(AgentBackchannel):
                 else:
                     return (500, '500: No Invitation Provided\n\n'.encode('utf8'))
 
+                print(invitation_url)
+                print(invitation)
                 await self.pico_receive_invitation(invitation_url)
 
                 connection = {"id": connection_id, "invitation": invitation, "invitation_url": invitation_url}
