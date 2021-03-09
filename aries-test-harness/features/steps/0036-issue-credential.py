@@ -3,6 +3,7 @@ import json
 from agent_backchannel_client import agent_backchannel_GET, agent_backchannel_POST, expected_agent_state
 from time import sleep
 import time
+import random
 
 # This step is defined in another feature file
 # Given "Acme" and "Bob" have an existing connection
@@ -11,7 +12,10 @@ import time
 SCHEMA_TEMPLATE = {
     "schema_name": "test_schema.",
     "schema_version": "1.0.0",
-    "attributes": ["attr_1","attr_2","attr_3"],
+    "attributes": [
+        "attr_1","attr_2","attr_3","attr_4","attr_5","attr_6","attr_7","attr_8","attr_9","attr_10",
+        "attr_11","attr_12","attr_13","attr_14","attr_15","attr_16","attr_17","attr_18","attr_19","attr_20",
+    ],
 }
 
 CRED_DEF_TEMPLATE = {
@@ -23,7 +27,24 @@ CRED_DEF_TEMPLATE = {
 CREDENTIAL_ATTR_TEMPLATE = [
     {"name": "attr_1", "value": "value_1"},
     {"name": "attr_2", "value": "value_2"},
-    {"name": "attr_3", "value": "value_3"}
+    {"name": "attr_3", "value": "value_3"},
+    {"name": "attr_4", "value": "value_4"},
+    {"name": "attr_5", "value": "value_5"},
+    {"name": "attr_6", "value": "value_6"},
+    {"name": "attr_7", "value": "value_7"},
+    {"name": "attr_8", "value": "value_8"},
+    {"name": "attr_9", "value": "value_9"},
+    {"name": "attr_10", "value": "value_10"},
+    {"name": "attr_11", "value": "value_11"},
+    {"name": "attr_12", "value": "value_12"},
+    {"name": "attr_13", "value": "value_13"},
+    {"name": "attr_14", "value": "value_14"},
+    {"name": "attr_15", "value": "value_15"},
+    {"name": "attr_16", "value": "value_16"},
+    {"name": "attr_17", "value": "value_17"},
+    {"name": "attr_18", "value": "value_18"},
+    {"name": "attr_19", "value": "value_19"},
+    {"name": "attr_20", "value": "value_20"},
 ]
 
 @given('"{issuer}" has a public did')
@@ -254,7 +275,7 @@ def step_impl(context, issuer):
     # Check the state of the holder after issuers call of send-offer
     assert expected_agent_state(context.holder_url, "issue-credential", context.cred_thread_id, "offer-received")
 
-    
+
 @when('"{holder}" requests the credential')
 @when('"{holder}" sends a credential request')
 def step_impl(context, holder):
@@ -348,23 +369,110 @@ def step_impl(context, holder):
 
 @then('"{holder}" has the credential issued')
 def step_impl(context, holder):
+    holder_url = context.config.userdata.get(holder)
+    # get the credential from the holders wallet
+    (resp_status, resp_text) = agent_backchannel_GET(holder_url + "/agent/command/", "credential", id=context.credential_id_dict[context.schema['schema_name']][len(context.credential_id_dict[context.schema['schema_name']])-1])
+    assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
+    resp_json = json.loads(resp_text)
+    assert resp_json["referent"] == context.credential_id_dict[context.schema['schema_name']][len(context.credential_id_dict[context.schema['schema_name']])-1]
+    assert resp_json["schema_id"] == context.issuer_schema_id_dict[context.schema["schema_name"]]
+    assert resp_json["cred_def_id"] == context.credential_definition_id_dict[context.schema["schema_name"]]
 
-        holder_url = context.config.userdata.get(holder)
-        # get the credential from the holders wallet
-        (resp_status, resp_text) = agent_backchannel_GET(holder_url + "/agent/command/", "credential", id=context.credential_id_dict[context.schema['schema_name']][len(context.credential_id_dict[context.schema['schema_name']])-1])
+    # Make sure the issuer is not holding the credential
+    # get the credential from the holders wallet
+    # TODO this expected error is not displaying in the agent output until after all the tests are executed. Uncomment this out when
+    # there is a solution to the error messaging happening at the end. 
+    #(resp_status, resp_text) = agent_backchannel_GET(context.issuer_url + "/agent/command/", "credential", id=context.credential_id_dict[context.schema['schema_name']])
+    #assert resp_status == 404, f'resp_status {resp_status} is not 404; {resp_text}'
+
+
+@when('"{issuer}" sends "{cred_count}" credentials in batches of "{cred_batch}"')
+def step_impl(context, issuer, cred_count, cred_batch):
+    issuer_url = context.config.userdata.get(issuer)
+    issuer_did = context.issuer_did_dict[context.schema['schema_name']]
+    issuer_connection_id = context.connection_id_dict[issuer][context.holder_name]
+    issuer_schema_id = context.issuer_schema_id_dict[context.schema['schema_name']]
+    issuer_schema = context.issuer_schema_dict[context.schema['schema_name']]
+    issuer_credential_definition_id = context.credential_definition_id_dict[context.schema['schema_name']]
+    issuer_credential_definition = context.issuer_credential_definition_dict[context.schema['schema_name']]
+
+    cred_count = int(cred_count)
+    cred_batch = int(cred_batch)
+
+    context.cred_thread_id_in_flight = []
+    context.cred_thread_id = []
+    for i in range(1, cred_count):
+        cred_attrs = CREDENTIAL_ATTR_TEMPLATE.copy()
+        for i in range(0, len(cred_attrs)-1):
+            cred_attrs[i]["value"] = cred_attrs[i]["value"] + "_" + str(random.randint(100000, 999999))
+        credential_offer = {
+            "schema_issuer_did": issuer_did,
+            "issuer_did": issuer_did,
+            "schema_name": issuer_schema["name"],
+            "cred_def_id": issuer_credential_definition_id,
+            "schema_version": issuer_schema["version"],
+            "credential_proposal": {
+                "@type": "did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/credential-preview",
+                "attributes": CREDENTIAL_ATTR_TEMPLATE.copy(),
+            },
+            "connection_id": issuer_connection_id,
+            "schema_id": issuer_schema_id,
+        }
+
+        # TODO loop this multiple times
+        (resp_status, resp_text) = agent_backchannel_POST(issuer_url + "/agent/command/", "issue-credential", operation="send", data=credential_offer)
         assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
+
         resp_json = json.loads(resp_text)
-        assert resp_json["referent"] == context.credential_id_dict[context.schema['schema_name']][len(context.credential_id_dict[context.schema['schema_name']])-1]
-        assert resp_json["schema_id"] == context.issuer_schema_id_dict[context.schema["schema_name"]]
-        assert resp_json["cred_def_id"] == context.credential_definition_id_dict[context.schema["schema_name"]]
 
-        # Make sure the issuer is not holding the credential
-        # get the credential from the holders wallet
-        # TODO this expected error is not displaying in the agent output until after all the tests are executed. Uncomment this out when
-        # there is a solution to the error messaging happening at the end. 
-        #(resp_status, resp_text) = agent_backchannel_GET(context.issuer_url + "/agent/command/", "credential", id=context.credential_id_dict[context.schema['schema_name']])
-        #assert resp_status == 404, f'resp_status {resp_status} is not 404; {resp_text}'
+        # Get the thread ID from the response text.
+        context.cred_thread_id_in_flight.append(resp_json["thread_id"])
+        context.cred_thread_id.append(resp_json["thread_id"])
 
+        count = 100
+        while cred_batch <= len(context.cred_thread_id_in_flight) and 0 < count:
+            for cred_thread_id in context.cred_thread_id_in_flight.copy():
+                (resp_status, resp_text) = agent_backchannel_GET(issuer_url + "/agent/command/", "issue-credential", id=cred_thread_id)
+                assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
+
+                resp_json = json.loads(resp_text)
+                cred_exch_state = resp_json["state"]
+                if cred_exch_state == "done":
+                    context.cred_thread_id_in_flight.remove(cred_thread_id)
+
+            if cred_batch <= len(context.cred_thread_id_in_flight):
+                sleep(0.1)
+
+            count = count - 1
+
+        assert cred_batch > len(context.cred_thread_id_in_flight), f'timeout at {i} credentials'
+
+
+@then('"{holder}" receives "{cred_count}" credentials')
+def step_impl(context, holder, cred_count):
+    holder_url = context.config.userdata.get(holder)
+
+    count = 600
+    while 0 < len(context.cred_thread_id) and 0 < count:
+        for cred_thread_id in context.cred_thread_id.copy():
+            # get the credential from the holders wallet
+            (resp_status, resp_text) = agent_backchannel_GET(holder_url + "/agent/command/", "issue-credential", id=cred_thread_id)
+            assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
+            resp_json = json.loads(resp_text)
+            if resp_json["state"] == "done":
+                context.cred_thread_id.remove(cred_thread_id)
+        if 0 < len(context.cred_thread_id):
+            sleep(0.1)
+        count = count - 1
+
+    assert 0 == len(context.cred_thread_id), f'timeout waiting for credentials'
+
+    # Make sure the issuer is not holding the credential
+    # get the credential from the holders wallet
+    # TODO this expected error is not displaying in the agent output until after all the tests are executed. Uncomment this out when
+    # there is a solution to the error messaging happening at the end. 
+    #(resp_status, resp_text) = agent_backchannel_GET(context.issuer_url + "/agent/command/", "credential", id=context.credential_id_dict[context.schema['schema_name']])
+    #assert resp_status == 404, f'resp_status {resp_status} is not 404; {resp_text}'
 
 
 @when(u'"{holder}" negotiates the offer with a proposal of the credential to "{issuer}"')

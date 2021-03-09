@@ -153,6 +153,10 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             #"--auto-accept-invites", 
             #"--auto-accept-requests", 
             #"--auto-respond-messages",
+            "--auto-respond-credential-proposal",
+            "--auto-respond-credential-offer",
+            "--auto-respond-credential-request",
+            "--auto-store-credential",
             ("--inbound-transport", "http", "0.0.0.0", str(self.http_port)),
             ("--outbound-transport", "http"),
             ("--admin", "0.0.0.0", str(self.admin_port)),
@@ -161,6 +165,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             ("--wallet-type", self.wallet_type),
             ("--wallet-name", self.wallet_name),
             ("--wallet-key", self.wallet_key),
+            "--preserve-exchange-records",
         ]
 
         if self.get_acapy_version_as_float() > 56:
@@ -655,6 +660,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
         elif op["topic"] == "issue-credential":
             # swap thread id for cred ex id from the webhook
             cred_ex_id = await self.swap_thread_id_for_exchange_id(rec_id, "credential-msg","credential_exchange_id")
+            #cred_ex_id = rec_id
             agent_operation = "/issue-credential/records/" + cred_ex_id
 
             (resp_status, resp_text) = await self.admin_GET(agent_operation)

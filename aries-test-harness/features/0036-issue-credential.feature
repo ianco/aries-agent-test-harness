@@ -62,6 +62,16 @@ Feature: RFC 0036 Aries agent issue credential
     And "Bob" acknowledges the credential issue
     Then "Bob" has the credential issued
 
+  @T003.1-RFC0036 @PerformanceTest @Indy
+  Scenario: Issue many credentials with the Issuer beginning with an offer
+    Given "2" agents
+      | name | role   |
+      | Acme | issuer |
+      | Bob  | holder |
+    And "Acme" and "Bob" have an existing connection
+    When "Acme" sends "300" credentials in batches of "32"
+    Then "Bob" receives "300" credentials
+
   @T004-RFC0036 @AIP10 @normal @AcceptanceTest @Indy
   Scenario: Issue a credential with the Issuer beginning with an offer with negotiation
     Given "2" agents
