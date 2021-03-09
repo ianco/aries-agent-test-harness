@@ -1,15 +1,17 @@
-FROM python:3.7-buster
-RUN mkdir -p /aries-backchannels
-WORKDIR /aries-backchannels
+#FROM python:3.7-buster
+FROM bcgovimages/von-image:py36-1.15-1
+RUN mkdir -p /home/indy/aries-backchannels
+RUN chmod a+rwx /home/indy/aries-backchannels
+WORKDIR /home/indy/aries-backchannels
 
-RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
-   && apt-get update \
-   && apt-get install -y software-properties-common \
-   && apt-get update \
-   && add-apt-repository 'deb https://repo.sovrin.org/sdk/deb bionic stable' \
-   && apt-get update \
-   && apt-get install -y libindy \
-   && apt-get install -y libnullpay
+#RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys CE7709D068DB5E88 \
+#   && apt-get update \
+#   && apt-get install -y software-properties-common \
+#   && apt-get update \
+#   && add-apt-repository 'deb https://repo.sovrin.org/sdk/deb bionic stable' \
+#   && apt-get update \
+#   && apt-get install -y libindy \
+#   && apt-get install -y libnullpay
 
 ENV RUNMODE=docker
 
@@ -25,8 +27,9 @@ COPY data ./
 
 # aca-py is in /usr/local/bin. The Backchannel is looking for it in ./bin, create a link to it in ./bin
 RUN mkdir -p ./bin
-RUN ln -s /usr/local/bin/aca-py ./bin/aca-py
-ENV PYTHONPATH=/aries-backchannels
+#RUN ln -s /usr/local/bin/aca-py ./bin/aca-py
+RUN ln -s /home/indy/.pyenv/versions/3.6.13/bin/aca-py ./bin/aca-py
+ENV PYTHONPATH=/home/indy/aries-backchannels
 
 RUN ./bin/aca-py --version > ./acapy-version.txt
 

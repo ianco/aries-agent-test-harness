@@ -166,6 +166,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             ("--wallet-name", self.wallet_name),
             ("--wallet-key", self.wallet_key),
             "--preserve-exchange-records",
+            # ("--arg-file", "acapy/postgres-indy-args.yml"),
         ]
 
         if self.get_acapy_version_as_float() > 56:
