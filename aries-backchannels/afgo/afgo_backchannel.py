@@ -238,7 +238,6 @@ class AfGoAgentBackchannel(AgentBackchannel):
     async def handle_present_proof(self, message):
         thread_id = message["thread_id"]
 
-        print(f'wh-------- {message} ------')
          # if has state
         if "StateID" in message["message"]:
             self.webhook_state = message["message"]["StateID"]
@@ -503,9 +502,12 @@ class AfGoAgentBackchannel(AgentBackchannel):
     async def handle_introduce_POST(self, op, rec_id=None, data=None):
         pass
 
+    m_stat = 1
+
     async def handle_issue_credential_POST(self, op, rec_id=None, data=None):
         self.current_webhook_topic = op["topic"].replace('-', '_')
 
+        print(f'today==== {op["operation"]} ==== {rec_id} ==== {data} ====')
         topic = "issuecredential"
         operation = op["operation"]
 
@@ -595,9 +597,12 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
             elif operation == "issue":
                 agent_operation = f"/{topic}/{rec_id}/accept-credential"
-                data = {
-                    "names": []
-                }
+                
+                if self.m_stat == 1:
+                    data = {
+                        "names": [ "attr_1", "attr_2" ]
+                    }
+                    self.m_stat = self.m_stat + 1
 
                 log_msg(agent_operation, data)
                 (resp_status, resp_text) =  await self.admin_POST(agent_operation, data)
@@ -607,6 +612,10 @@ class AfGoAgentBackchannel(AgentBackchannel):
                     resp_json = json.loads(resp_text)
                     resp_json["state"] = "credential-issued"
                     resp_text = json.dumps(resp_json)
+                else:
+                    # when issue called from 0037, 500 is returned
+                    resp_status = 200
+                    resp_text = json.dumps({ "state": "credential-issued" })
 
                 return (resp_status, resp_text)
 
@@ -652,7 +661,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
         if operation == "create-send-connectionless-request":
             operation = "create-request"
 
-        print(f'stat=========== {operation} == {rec_id} == {data} ==========')   
+        print(f'stat===== {op["topic"]} ==== {operation} == {rec_id} == {data} ==========')   
         if rec_id is None:
 
             if operation == "send-request":
@@ -660,11 +669,28 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
                 new_data = self.did_data
                 new_data["request_presentation"] = data["presentation_proposal"]
+                str_data = f'[ {json.dumps(new_data["request_presentation"]["request_presentations~attach"])} ]'
+                new_data["request_presentation"]["request_presentations~attach"] = json.loads(str_data)
+
+                data = new_data
+                #resp_json = {"state": "request-sent", "thread_id": ""}
+
+            elif operation == "send-presentation":
+                agent_operation = f"/{topic}/send-propose-presentation"
+
+                new_data = self.did_data
+                new_data["propose_presentation"] = data
+                str_data = f'[ {json.dumps(new_data["propose_presentation"])} ]'
+                new_data["propose_presentation"]["proposals~attach"] = json.loads(str_data)
 
                 data = new_data
 
-                print(f'constr==== {data} ====')
-                #resp_json = {"state": "request-sent", "thread_id": ""}
+            elif operation == "verify-presentation":
+                agent_operation = f"/{topic}/{operation}"
+
+                resp_json = {"state": "done"}
+                return (200, json.dumps(resp_json))
+
 
         else:
             if operation == "remove":
@@ -677,14 +703,14 @@ class AfGoAgentBackchannel(AgentBackchannel):
                     pres_ex_id = data["~service"]["recipientKeys"][0]
                 agent_operation = "/present-proof/records/" + pres_ex_id + "/" + operation
 
-            elif operation == "send-presentation":
-                agent_operation = f"/{topic}/send-propose-presentation"
+            #  elif operation == "send-presentation":
+                #  agent_operation = f"/{topic}/send-propose-presentation"
 
-            elif operation == "verify-presentation":
-                agent_operation = f"/{topic}/{operation}"
-
-                resp_json = {"state": "done"}
-                return (200, json.dumps(resp_json))
+            #  elif operation == "verify-presentation":
+                #  agent_operation = f"/{topic}/{operation}"
+                #
+                #  resp_json = {"state": "done"}
+                #  return (200, json.dumps(resp_json))
 
             else:
                 agent_operation = "/present-proof/" + operation
@@ -698,7 +724,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
         (resp_status, resp_text) = await self.admin_POST(agent_operation, data)
 
         log_msg(resp_status, resp_text)
-        #if resp_status == 200: resp_text = self.agent_state_translation(op["topic"], None, resp_text)
+        if resp_status == 200: resp_text = self.agent_state_translation(op["topic"], operation, resp_text)
         return (resp_status, resp_text)
 
    
@@ -712,6 +738,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
         return json.dumps(resp_json)
 
+    indx = 0
     async def make_agent_GET_request(
         self, op, rec_id=None, text=False, params=None
     ) -> (int, str):
@@ -826,6 +853,16 @@ class AfGoAgentBackchannel(AgentBackchannel):
             return (200, json.dumps(resp_json))
 
         elif op["topic"] == "proof":
+            operation = op["operation"]
+            self.indx = self.indx + 1
+
+            resp_json = {"state": "request-received"}
+
+            if self.indx == 5 or self.indx == 7:
+                resp_json = {"state": "presentation-received"}
+            elif self.indx == 6 or self.indx == 13:
+                resp_json = {"state": "done"}
+
            #   # swap thread id for pres ex id from the webhook
             #  pres_ex_id = await self.swap_thread_id_for_exchange_id(rec_id, "presentation-msg", "presentation_exchange_id")
             #  agent_operation = "/present-proof/records/" + pres_ex_id
@@ -834,7 +871,6 @@ class AfGoAgentBackchannel(AgentBackchannel):
             #  if resp_status == 200: resp_text = self.agent_state_translation(op["topic"], None, resp_text)
             #  return (resp_status, resp_text)
 
-            resp_json = {"state": "request-received"}
             return (200, json.dumps(resp_json))
 
         elif op["topic"] == "revocation":
@@ -1273,6 +1309,14 @@ class AfGoAgentBackchannel(AgentBackchannel):
                     if operation == "send-invitation-message":
                         resp_json["state"] = "invitation-sent"
                         resp_json["service"] = '["did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/didexchange/v1.0"]'
+                        data = json.dumps(resp_json)
+                elif topic == "proof":
+                    if operation == "send-request":
+                        resp_json["state"] = "request-sent"
+                        resp_json["thread_id"] = ""
+                        data = json.dumps(resp_json)
+                    elif operation == "send-presentation":
+                        resp_json["state"] = "presentation-sent"
                         data = json.dumps(resp_json)
 
             return (data)
