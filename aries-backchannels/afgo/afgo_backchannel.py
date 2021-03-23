@@ -473,7 +473,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
     async def handle_did_exchange_POST(self, op, rec_id=None, data=None):
         operation = op["operation"]
-        agent_operation = "didexchange"
+        agent_operation = "/didexchange"
 
         if operation == "send-message":
             agent_operation = f"/connections/{rec_id}/accept-request"
@@ -489,6 +489,9 @@ class AfGoAgentBackchannel(AgentBackchannel):
             agent_operation = f"/connections/{rec_id}/accept-request"
             #(resp_status, resp_text) = 200, '{ "state": "response-sent" }'
             #return (resp_status, resp_text)
+
+        elif operation == "create-request-resolvable-did":
+            return (501, f"501: Not Implemented: {operation}\n\n".encode('utf8'))
         
         (resp_status, resp_text) = await self.admin_POST(agent_operation, data)
         if resp_status == 200: resp_text = self.add_did_exchange_state_to_response(operation, resp_text)
