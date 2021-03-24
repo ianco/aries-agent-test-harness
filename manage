@@ -72,7 +72,7 @@ usage () {
   rebuild [ -a agent ]* args
     Same as build, but adds the --no-cache option to force building from scratch
 
-  run [ -a/b/m/d agent ] [-r allure [-e comparison]] [ -i <ini file> ] [ -o <output file> ] [ -n ] [ -t tags ]*
+  run [ -a/b/f/m/d agent ] [-r allure [-e comparison]] [ -i <ini file> ] [ -o <output file> ] [ -n ] [ -v <AIP level> ] [ -t tags ]*
     Run the tagged tests using the specified agents for Acme, Bob, Faber and Mallory.
       Select the agents for the roles of Acme (-a), Bob (-b), Faber (-f) and Mallory (-m).
       - For all to be set to the same, use "-d" for default.
@@ -80,6 +80,8 @@ usage () {
       Use -t option(s) to indicate tests with the gives tag(s) are to be executed.
         -t options can NOT have spaces, even if the option is quoted; use a behave INI file instead (-i option)
         For not running tagged tests, specify a ~ before the tag, e.g. "-t ~@wip" runs tests that don't have the "@wip" tag
+      Use -v to specify the AIP level, in case the agent needs to customize its startup configuration
+        "-v 10" or "-v 20"
       Use the -i option to use the specified file as the behave.ini file for the run
       - Default is the behave.ini file in the "aries-test-harness" folder
       Use the -r option to output to allure
@@ -317,6 +319,7 @@ startAgent() {
   local PORT_RANGE=$4
   local BACKCHANNEL_PORT=$5
   local AGENT_ENDPOINT_PORT=$6
+  local AIP_CONFIG=$7
 
   if [ ! "$(docker ps -q -f name=$CONTAINER_NAME)" ]; then
     if [[ "${USE_NGROK}" = "true" ]]; then
@@ -335,7 +338,7 @@ startAgent() {
     echo "Starting ${NAME} Agent using ${IMAGE_NAME} ..."
     local LEDGER_URL="${LEDGER_URL_CONFIG:-http://${DOCKERHOST}:9000}"
     local TAILS_SERVER_URL="${TAILS_SERVER_URL_CONFIG:-http://${DOCKERHOST}:6543}"
-    local container_id=$(docker run -d -it --rm --name "${CONTAINER_NAME}" --expose "${PORT_RANGE}" -p "${PORT_RANGE}:${PORT_RANGE}" -e "NGROK_NAME=${NGROK_NAME}" -e "DOCKERHOST=${DOCKERHOST}" -e "AGENT_NAME=${NAME}" -e "LEDGER_URL=${LEDGER_URL}" -e "TAILS_SERVER_URL=${TAILS_SERVER_URL}" "${IMAGE_NAME}" -p "${BACKCHANNEL_PORT}" -i false)
+    local container_id=$(docker run -d -it --rm --name "${CONTAINER_NAME}" --expose "${PORT_RANGE}" -p "${PORT_RANGE}:${PORT_RANGE}" -e "NGROK_NAME=${NGROK_NAME}" -e "DOCKERHOST=${DOCKERHOST}" -e "AGENT_NAME=${NAME}" -e "LEDGER_URL=${LEDGER_URL}" -e "TAILS_SERVER_URL=${TAILS_SERVER_URL}" -e "AIP_CONFIG=${AIP_CONFIG}" "${IMAGE_NAME}" -p "${BACKCHANNEL_PORT}" -i false)
     sleep 1
     if [[ "${USE_NGROK}" = "true" ]]; then
       docker network connect aath_network "${CONTAINER_NAME}"
@@ -398,15 +401,16 @@ runTests() {
   export BOB_AGENT=${BOB_AGENT:-${BOB}-agent-backchannel}
   export FABER_AGENT=${FABER_AGENT:-${FABER}-agent-backchannel}
   export MALLORY_AGENT=${MALLORY_AGENT:-${MALLORY}-agent-backchannel}
+  export AIP_CONFIG=${AIP_CONFIG:-10}
 
   export PROJECT_ID=${PROJECT_ID:-general}
 
   docker network create aath_network
 
-  startAgent Acme acme_agent "$ACME_AGENT" "9020-9029" 9020 9021
-  startAgent Bob bob_agent "$BOB_AGENT" "9030-9039" 9030 9031
-  startAgent Faber faber_agent "$FABER_AGENT" "9040-9049" 9040 9041
-  startAgent Mallory mallory_agent "$MALLORY_AGENT" "9050-9059" 9050 9051
+  startAgent Acme acme_agent "$ACME_AGENT" "9020-9029" 9020 9021 "$AIP_CONFIG"
+  startAgent Bob bob_agent "$BOB_AGENT" "9030-9039" 9030 9031 "$AIP_CONFIG"
+  startAgent Faber faber_agent "$FABER_AGENT" "9040-9049" 9040 9041 "$AIP_CONFIG"
+  startAgent Mallory mallory_agent "$MALLORY_AGENT" "9050-9059" 9050 9051 "$AIP_CONFIG"
 
   echo
   waitForAgent Acme 9020
@@ -492,7 +496,7 @@ if [[ "${COMMAND}" == "run" ]]; then
   TAGS=""
   BEHAVE_INI=aries-test-harness/behave.ini
 
-  while getopts "hna:b:c:f:m:r:e:d:t:i:" FLAG; do
+  while getopts "hna:b:c:f:m:r:e:d:t:v:i:" FLAG; do
     case $FLAG in
         h ) usage ;;
         : ) usage ;;
@@ -513,6 +517,8 @@ if [[ "${COMMAND}" == "run" ]]; then
         m ) export MALLORY=${OPTARG}
             ;;
         t ) export TAGS="${TAGS} --tags=${OPTARG}"
+            ;;
+        v ) export AIP_CONFIG=${OPTARG}
             ;;
         i ) export BEHAVE_INI=${OPTARG}
             ;;
