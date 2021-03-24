@@ -224,13 +224,11 @@ class MobileAgentBackchannel(AgentBackchannel):
             if operation == "receive-invitation":
                 self.connection_state = "invited"
                 print("=================================================================")
-                print("Connection invitation:", data)
 
                 message_bytes = json.dumps(data).encode('ascii')
                 base64_bytes = base64.b64encode(message_bytes)
                 base64_message = base64_bytes.decode('ascii')
                 invitation_url = data["serviceEndpoint"] + "?c_i=" + base64_message
-                print("Connection invitation:", invitation_url)
 
                 qr = QRCode(border=1)
                 qr.add_data(invitation_url)
@@ -242,6 +240,10 @@ class MobileAgentBackchannel(AgentBackchannel):
                     json.dumps(data), label="Invitation Data:", color=None
                 )
                 qr.print_ascii(invert=True)
+                log_msg(
+                    "If you can't scan the QR code here is the url."
+                )
+                print("Invitation url:", invitation_url)
                 print("=================================================================")
 
                 return (200, '{"result": "ok", "connection_id": "1", "state": "' + self.connection_state + '"}')
