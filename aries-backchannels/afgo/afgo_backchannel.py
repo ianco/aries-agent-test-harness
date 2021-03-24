@@ -45,6 +45,11 @@ class AfGoAgentBackchannel(AgentBackchannel):
     current_webhook_topic = None
     did_data = None
     wehhook_state = None
+    indx = 0
+
+    # agent connection
+    agent_invitation_id = None
+    agent_connection_id = None
 
     def __init__(
         self, 
@@ -408,7 +413,6 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
         return (501, '501: Not Implemented\n\n'.encode('utf8'))
 
-
     async def handle_out_of_band_POST(self, op, rec_id=None, data=None):
         self.current_webhook_topic = op["topic"].replace('-', '_')
         operation = op["operation"]
@@ -431,6 +435,8 @@ class AfGoAgentBackchannel(AgentBackchannel):
                 resp_json_ri = json.loads(resp_text_ri)
                 connection_id = resp_json_ri["connection_id"]
 
+                self.agent_connection_id = connection_id
+
                 (resp_status_conn, resp_text_conn) = await self.admin_GET(f'/connections/{connection_id}')
 
                 # merge request
@@ -452,14 +458,32 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
             return (resp_status, resp_text)
 
+
         agent_operation = f"/{agent_operation}/{self.map_test_ops_to_bachchannel[operation]}"
 
         (resp_status, resp_text) = await self.admin_POST(agent_operation, data)
+        resp_json = json.loads(resp_text)
+        if 'invitation' in resp_json:
+            self.agent_invitation_id = resp_json["invitation"]["@id"]
+            await self.find_connection_by_invitation_id(resp_json["invitation"]["@id"])
+
         if resp_status == 200: resp_text = self.agent_state_translation(op["topic"], operation, resp_text)
         return (resp_status, resp_text)
 
-    def enrich_receive_invitation_data_request(self, data):
+    async def find_connection_by_invitation_id(self, invitation_id):
+        if (invitation_id != None):
+            operation = "/connections"
+            (resp_status, resp_text) = await self.admin_GET(operation)
 
+            if resp_status == 200:
+                resp_json = json.loads(resp_text)
+                if "results" in resp_json:
+                    for connection in resp_json["results"]:
+                        if connection["InvitationID"] == invitation_id:
+                            self.agent_connection_id = connection["ConnectionID"]
+
+
+    def enrich_receive_invitation_data_request(self, data):
         data = { "invitation": data }
         data["my_label"] = data["invitation"]["label"] #enrichment
 
@@ -482,13 +506,11 @@ class AfGoAgentBackchannel(AgentBackchannel):
             (resp_status, resp_text) = 200, '{ "state": "request-sent" }'
             return (resp_status, resp_text)
 
-        # elif operation == "receive-invitation":
-        #     agent_operation = f"/{agent_operation}/{operation}"
-
         elif operation == "send-response":
             agent_operation = f"/connections/{rec_id}/accept-request"
             #(resp_status, resp_text) = 200, '{ "state": "response-sent" }'
             #return (resp_status, resp_text)
+            await self.find_connection_by_invitation_id(self.agent_invitation_id)
 
         elif operation == "create-request-resolvable-did":
             return (501, f"501: Not Implemented: {operation}\n\n".encode('utf8'))
@@ -502,25 +524,26 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
         return (resp_status, resp_text)
 
-    async def handle_introduce_POST(self, op, rec_id=None, data=None):
-        pass
 
-    m_stat = 1
-
+    inv_stat = False
     async def handle_issue_credential_POST(self, op, rec_id=None, data=None):
         self.current_webhook_topic = op["topic"].replace('-', '_')
 
-        print(f'today==== {op["operation"]} ==== {rec_id} ==== {data} ====')
+        if not self.inv_stat:
+            # called once
+            await self.find_connection_by_invitation_id(self.agent_invitation_id)
+            self.inv_stat = True
+        
         topic = "issuecredential"
         operation = op["operation"]
 
-        if self.did_data == None:
-            pre_operation = "/connections"
+        if (self.did_data == None):
+            pre_operation = f"/connections/{self.agent_connection_id}"
             (pre_status, pre_text) = await self.admin_GET(pre_operation)
 
             if pre_status == 200:
                 pre_json = json.loads(pre_text)
-                pre_json = pre_json["results"][0]
+                pre_json = pre_json["result"]
 
                 self.did_data = {
                     "my_did": pre_json["MyDID"],
@@ -601,11 +624,9 @@ class AfGoAgentBackchannel(AgentBackchannel):
             elif operation == "issue":
                 agent_operation = f"/{topic}/{rec_id}/accept-credential"
                 
-                if self.m_stat == 1:
-                    data = {
-                        "names": [ "attr_1", "attr_2" ]
-                    }
-                    self.m_stat = self.m_stat + 1
+                data = {
+                    "names": [ "attr_1", "attr_2" ]
+                }
 
                 log_msg(agent_operation, data)
                 (resp_status, resp_text) =  await self.admin_POST(agent_operation, data)
@@ -664,7 +685,6 @@ class AfGoAgentBackchannel(AgentBackchannel):
         if operation == "create-send-connectionless-request":
             operation = "create-request"
 
-        print(f'stat===== {op["topic"]} ==== {operation} == {rec_id} == {data} ==========')   
         if rec_id is None:
 
             if operation == "send-request":
@@ -741,7 +761,6 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
         return json.dumps(resp_json)
 
-    indx = 0
     async def make_agent_GET_request(
         self, op, rec_id=None, text=False, params=None
     ) -> (int, str):
@@ -1313,6 +1332,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
                         resp_json["state"] = "invitation-sent"
                         resp_json["service"] = '["did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/didexchange/v1.0"]'
                         data = json.dumps(resp_json)
+
                 elif topic == "proof":
                     if operation == "send-request":
                         resp_json["state"] = "request-sent"
