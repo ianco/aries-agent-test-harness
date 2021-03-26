@@ -230,6 +230,8 @@ class AcaPyAgentBackchannel(AgentBackchannel):
         if os.getenv('LOG_LEVEL') is not None:
             result.append(("--log-level", os.getenv('LOG_LEVEL')))
 
+        result.append(("--trace", "--trace-target", "log", "--trace-tag", "acapy.events", "--trace-label", "acapy",))
+
         #if self.extra_args:
         #    result.extend(self.extra_args)
 
@@ -394,6 +396,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
 
                 # extract invitation from the agent's response
                 invitation_resp = json.loads(resp_text)
+                print("Aca-py generated invitation:", invitation_resp)
                 resp_text = json.dumps(invitation_resp)
 
                 if resp_status == 200: resp_text = self.agent_state_translation(op["topic"], operation, resp_text)
@@ -569,6 +572,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
         elif operation == "receive-invitation":
             # TODO check for Alias and Auto_accept in data to add to the call (works without for now)
             # TODO add use_existing_connection=false in data in the test to pass to here. 
+            print("aca-py receive invitation:", data)
             use_existing_connection = "false"
             auto_accept = "false"
             agent_operation = agent_operation + "receive-invitation" + "?auto_accept=" + auto_accept + "&use_existing_connection=" + use_existing_connection
@@ -586,6 +590,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             agent_operation = agent_operation + rec_id + "/accept-invitation"
 
         elif operation == "receive-invitation":
+            print("aca-py receive invitation:", data)
             agent_operation = agent_operation + operation
 
         elif operation == "send-response":
@@ -642,6 +647,8 @@ class AcaPyAgentBackchannel(AgentBackchannel):
     async def make_agent_GET_request(
         self, op, rec_id=None, text=False, params=None
     ) -> (int, str):
+
+        print("GET:", op)
 
         if op["topic"] == "status":
             status = 200 if self.ACTIVE else 418
@@ -779,8 +786,12 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             connection_id = rec_id
             agent_operation = "/connections/" + connection_id
 
+            (resp_status, resp_text) = await self.admin_GET("/connections")
+            print("All connections:", resp_text)
+
             (resp_status, resp_text) = await self.admin_GET(agent_operation)
-            if resp_status == 200: resp_text = self.agent_state_translation(op["topic"], None, resp_text)
+            if resp_status == 200:
+                resp_text = self.agent_state_translation(op["topic"], None, resp_text)
             return (resp_status, resp_text)
 
         return (501, '501: Not Implemented\n\n'.encode('utf8'))

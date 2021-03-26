@@ -67,7 +67,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
             params
         )
 
-        # Aca-py : RFC
+        # AF-Go : RFC
         self.connectionStateTranslationDict = {
             "invitation": "invited",
             "requested": "request-received",
@@ -75,7 +75,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
             "completed": "completed"
         }
 
-        # Aca-py : RFC
+        # AF-Go : RFC
         self.issueCredentialStateTranslationDict = {
             "proposal_sent": "proposal-sent",
             "proposal_received": "proposal-received",
@@ -94,7 +94,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
             "request-sent": "credential-received"
         }
 
-        # Aca-py : RFC
+        # AF-Go : RFC
         self.presentProofStateTranslationDict = {
             "request_sent": "request-sent",
             "request_received": "request-received",
@@ -155,7 +155,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
         if self.webhook_url:
             result.append(("--webhook-url", self.webhook_url))
         
-        # This code for Tails Server is included here because aca-py does not support the env var directly yet. 
+        # This code for Tails Server is included here because af-go does not support the env var directly yet. 
         # when it does (and there is talk of supporting YAML) then this code can be removed. 
         #if os.getenv('TAILS_SERVER_URL') is not None:
         #    # if the env var is set for tails server then use that.
@@ -164,7 +164,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
         #    # if the tails server env is not set use the gov.bc TEST tails server.
         #    result.append(("--tails-server-base-url", "https://tails-server-test.pathfinder.gov.bc.ca"))
         
-        # This code for log level is included here because aca-py does not support the env var directly yet. 
+        # This code for log level is included here because af-go does not support the env var directly yet. 
         # when it does (and there is talk of supporting YAML) then this code can be removed. 
         #if os.getenv('LOG_LEVEL') is not None:
         #    result.append(("--log-level", os.getenv('LOG_LEVEL')))
@@ -322,6 +322,10 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
                 # extract invitation from the agent's response
                 invitation_resp = json.loads(resp_text)
+                print("Afgo generate invitation:", invitation_resp)
+                invitation_resp["services"] = invitation_resp["service"]
+                del invitation_resp["service"]
+                print("Afgo modified invitation:", invitation_resp)
                 resp_text = json.dumps(invitation_resp)
 
                 if resp_status == 200: resp_text = self.agent_state_translation(op["topic"], operation, resp_text)
@@ -329,6 +333,8 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
             elif operation == "receive-invitation":
                 agent_operation = "/connections/" + operation
+
+                print("Afgo receive invitation:", data)
 
                 (resp_status, resp_text) = await self.admin_POST(agent_operation, data=data)
                 if resp_status == 200: resp_text = self.agent_state_translation(op["topic"], None, resp_text)
@@ -423,7 +429,9 @@ class AfGoAgentBackchannel(AgentBackchannel):
             data = { "label": "Bob" }
 
         elif operation == "receive-invitation":
+            print("Afgo receive invitation:", data)
             data = self.enrich_receive_invitation_data_request(data)
+            print("Afgo enriched invitation:", data)
 
             agent_operation = f"/{agent_operation}/{self.map_test_ops_to_bachchannel[operation]}"
 
@@ -464,10 +472,16 @@ class AfGoAgentBackchannel(AgentBackchannel):
         (resp_status, resp_text) = await self.admin_POST(agent_operation, data)
         resp_json = json.loads(resp_text)
         if 'invitation' in resp_json:
+            print("OOB invitation:", resp_json)
+            resp_json["invitation"]["services"] = resp_json["invitation"]["service"]
+            del resp_json["invitation"]["service"]
             self.agent_invitation_id = resp_json["invitation"]["@id"]
             await self.find_connection_by_invitation_id(resp_json["invitation"]["@id"])
+            resp_text = json.dumps(resp_json)
+            print("return OOB invitation:", resp_text)
 
-        if resp_status == 200: resp_text = self.agent_state_translation(op["topic"], operation, resp_text)
+        if resp_status == 200:
+            resp_text = self.agent_state_translation(op["topic"], operation, resp_text)
         return (resp_status, resp_text)
 
     async def find_connection_by_invitation_id(self, invitation_id):
@@ -484,9 +498,10 @@ class AfGoAgentBackchannel(AgentBackchannel):
 
 
     def enrich_receive_invitation_data_request(self, data):
+        data["service"] = data["services"]
+        del data["services"]
         data = { "invitation": data }
         data["my_label"] = data["invitation"]["label"] #enrichment
-
         return data
 
     def enrich_receive_invitation_data_response(self, resp):
@@ -741,7 +756,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
         log_msg(agent_operation, data)
 
         #if data is not None:
-        #    # Format the message data that came from the test, to what the Aca-py admin api expects.
+        #    # Format the message data that came from the test, to what the af-go admin api expects.
         #    data = self.map_test_json_to_admin_api_json(op["topic"], operation, data)
 
         (resp_status, resp_text) = await self.admin_POST(agent_operation, data)
@@ -1286,7 +1301,7 @@ class AfGoAgentBackchannel(AgentBackchannel):
     def agent_state_translation(self, topic, operation, data):
             # This method is used to translate the agent states passes back in the responses of operations into the states the 
             # test harness expects. The test harness expects states to be as they are written in the Protocol's RFC.
-            # the following is what the tests/rfc expect vs what aca-py communicates
+            # the following is what the tests/rfc expect vs what af-go communicates
             # Connection Protocol:
             # Tests/RFC         |   Afgo
             # invited           |   invitation
@@ -1419,13 +1434,13 @@ async def main(start_port: int, show_timing: bool = False, interactive: bool = T
 
     try:
         agent = AfGoAgentBackchannel(
-            "aca-py", start_port+1, start_port+2, genesis_data=genesis
+            "af-go", start_port+1, start_port+2, genesis_data=genesis
         )
 
         # start backchannel (common across all types of agents)
         await agent.listen_backchannel(start_port)
 
-        # start aca-py agent sub-process and listen for web hooks
+        # start af-go agent sub-process and listen for web hooks
         await agent.listen_webhooks(start_port+3)
         # await agent.register_did()
 

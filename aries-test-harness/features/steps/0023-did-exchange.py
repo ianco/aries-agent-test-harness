@@ -44,10 +44,11 @@ def step_impl(context, responder):
     (resp_status, resp_text) = agent_backchannel_GET(responder_url + "/agent/response/", "did-exchange", id=invitation_id)
     assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
     resp_json = json.loads(resp_text)
+    print("explicit invitation response:", resp_json)
 
     # Some agents (afgo) do not have a webhook that give a connection id at this point in the protocol. 
     # If it is not here, skip this and check for one later in the process and add it then.
-    if "connection_id" in resp_text:
+    if "connection_id" in resp_json:
         context.connection_id_dict[responder][context.requester_name] = resp_json["connection_id"]
 
     # Check to see if the responder name is the same as this person. If not, it is a 3rd person acting as an issuer that needs a connection
@@ -178,6 +179,7 @@ def step_impl(context, responder):
 def step_impl(context, requester):
 
     data = context.responder_invitation
+    print("Receiving invitation:", data)
     (resp_status, resp_text) = agent_backchannel_POST(context.requester_url + "/agent/command/", "out-of-band", operation="receive-invitation", data=data)
     assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
 
@@ -214,11 +216,14 @@ def step_impl(context, responder):
     # Make a call to the responder for the connection id and add it to the collection
     if context.requester_name not in context.connection_id_dict[responder]:
         # One way (maybe preferred) to get the connection id is to get it from the probable webhook that the controller gets because of the previous step
+        print("Responder invitation:", context.responder_invitation)
         invitation_id = context.responder_invitation["@id"]
         time.sleep(0.5) # delay for webhook to execute
         (resp_status, resp_text) = agent_backchannel_GET(responder_url + "/agent/response/", "did-exchange", id=invitation_id) # {}
+        #(resp_status, resp_text) = agent_backchannel_GET(responder_url + "/agent/response/", "did-exchange") # {}
         assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
         resp_json = json.loads(resp_text)
+        print("Got did-exchange invitation response:", resp_json)
 
         # The second way to do this is to call the connection protocol for the connection id given the invitation_id or a thread id.
         # This method is disabled for now, will be enabled if afgo can't get the connection id for the webhook above. 
