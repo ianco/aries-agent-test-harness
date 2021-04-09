@@ -1,1 +1,1 @@
-aries-cloudagent[indy]@git+https://github.com/hyperledger/aries-cloudagent-python@main
+aries-cloudagent[indy,askar]@git+https://github.com/hyperledger/aries-cloudagent-python@shared-components

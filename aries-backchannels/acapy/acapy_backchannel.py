@@ -56,6 +56,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             genesis_data,
             params
         )
+        self.wallet_type = "indy"
 
         # get aca-py version if available
         self.acapy_version = None
@@ -166,7 +167,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             ("--wallet-name", self.wallet_name),
             ("--wallet-key", self.wallet_key),
             "--preserve-exchange-records",
-            # ("--arg-file", "acapy/postgres-indy-args.yml"),
+            ("--arg-file", "acapy/postgres-indy-args.yml"),
         ]
 
         if self.get_acapy_version_as_float() > 56:
@@ -213,6 +214,8 @@ class AcaPyAgentBackchannel(AgentBackchannel):
 
         #if self.extra_args:
         #    result.extend(self.extra_args)
+
+        print("Returning result:", result)
 
         return result
 
