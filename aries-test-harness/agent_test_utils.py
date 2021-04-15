@@ -89,4 +89,22 @@ def amend_filters_with_runtime_data(context, filters):
         if "schema_id" in filters["indy"] and filters["indy"]["schema_id"] == "replace_me":
             filters["indy"]["schema_id"] = context.issuer_schema_dict[context.schema['schema_name']]["id"]
 
+    if "json-ld" in filters:
+        json_ld = filters.get("json-ld")
+        credential = json_ld.get("credential")
+        options = json_ld.get("options")
+
+        issuer = context.issuer_did_dict[context.schema['schema_name']]
+
+        if "issuer" in credential:
+            # "issuer": "replace_me"
+            if credential.get("issuer") == "replace_me":
+                credential["issuer"] = issuer
+            # "issuer": { "id": "replace_me" }
+            elif credential.get("issuer", {}).get("id") == "replace_me":
+                credential["issuer"]["id"] = issuer
+        if options.get("proofType") == "replace_me":
+            options["proofType"] = context.proof_type
+
+
     return filters

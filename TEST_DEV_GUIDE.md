@@ -7,6 +7,7 @@
   - [Defining Protocol Suite Specific Tags](#defining-protocol-suite-specific-tags)
 - [Defining Backchannel Operations](#defining-backchannel-operations)
 - [Implementing Test Steps](#implementing-test-steps)
+  - [Github Actions and Comparing Test Results Day-To-Day](#github-actions-and-comparing-test-results-day-to-day)
 - [Implementing the Backchannel](#implementing-the-backchannel)
 - [Diving Deeper](#diving-deeper)
 
@@ -91,12 +92,13 @@ Defining specific tags should be discussed with the Aries Protocol test communit
 
 ## Defining Backchannel Operations
 
-Defining test steps require using and extending the commands and operations to be implemented by the backchannels. The commands and operations are documented in a Google Sheet, located [here](https://bit.ly/AriesTestHarnessScenarios). All operations are also documented in an OpenAPI Spec located [here](./openapi-spec.yml). The OpenAPI spec can be viewed using [Swagger UI](https://github.com/swagger-api/swagger-ui) locally or online using a tool like [Swagger Editor](https://editor.swagger.io/). As test developers add new steps to test cases, document the new operations on which they depend in the spreadsheet and the OpenAPI spec. The data from the Google Sheet is available to the backchannels and are used by some to implement the backchannel capabilities. Making the data available is currently a manual process that is done using the following process:
+Defining test steps require using and extending the commands and operations to be implemented by the backchannels. The commands and operations are documented in a Google Sheet, located [here](https://bit.ly/AriesTestHarnessScenarios). All operations are also documented in an OpenAPI Spec located [here](./docs/assets/openapi-spec.yml). The OpenAPI spec can be viewed on the Aries Interop page [here](http://aries-interop.info/api). As test developers add new steps to test cases, document the new operations on which they depend in the spreadsheet and the OpenAPI spec. The data from the Google Sheet is available to the backchannels and are used by some to implement the backchannel capabilities. Making the data available is currently a manual process that is done using the following process:
 
 - prepare a branch in your fork of the repo that will be a PR
-- export the Google Sheet, saving it into this file in the repo: [steps/Mapping Aries Protocols for Testing - Aries Agent Test Scripts.csv](./aries-test-harness/features/Mapping%20Aries%20Protocols%20for%20Testing%20-%20Aries%20Agent%20Test%20Scripts.csv)
-- run the command in the `aries-test-harness/steps` folder: `./genBCdata Mapping\ Aries\ Protocols\ for\ Testing\ -\ Aries\ Agent\ Test\ Scripts.csv`
-  - this will replace the current data file in the `aries-backchannels/data` folder
+  - [optional] export the Google Sheet, saving it into this file in the repo: [steps/Mapping Aries Protocols for Testing - Aries Agent Test Scripts.csv](./aries-test-harness/features/Mapping%20Aries%20Protocols%20for%20Testing%20-%20Aries%20Agent%20Test%20Scripts.csv)
+- run the command in the `aries-test-harness/features` folder:
+  - If you used the public Google sheet, you can skip the previous [optional] step and run: `python genBCData.py`. This wil download the latest version automatically
+  - Otherwise run: `python genBCData.py Mapping\ Aries\ Protocols\ for\ Testing\ -\ Aries\ Agent\ Test\ Scripts.csv` to replace the current data file in the `aries-backchannels/data` folder
 - submit a PR to update the file
 
 > To Do: This should be changed to a github action that is run on each commit to the repo

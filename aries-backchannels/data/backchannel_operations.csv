@@ -70,6 +70,7 @@ rfc,command,response,topic,method,operation,id,data,description,id_details,data_
 0036 Issue Credential,X,,issue-credential,POST,store,Y,Y,Send credential acknowledgement with ID ,cred_exchange_id,"offer = {
     ""credential_id"": ""issue-credential exchange id string""
 }",cred_exchange_id
+0453 Issue Credential v2,X,,issue-credential-v2,POST,prepare-json-ld,,Y,Prepare for issuing a JSON-LD credential,,"data = { ""did_method"": ""key"", ""key_type"": ""ed25519"" }",did
 0453 Issue Credential,X,,issue-credential-v2,POST,send-proposal,,Y,Send a credential proposal,,"proposal = {
    ""connection_id"":""d71cd2f1-f075-4083-9b63-73f507813836"",
    ""credential_preview"":{

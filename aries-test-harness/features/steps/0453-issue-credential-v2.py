@@ -3,7 +3,37 @@ import json
 from agent_backchannel_client import agent_backchannel_GET, agent_backchannel_POST, expected_agent_state
 from agent_test_utils import format_cred_proposal_by_aip_version
 from time import sleep
-import time
+
+CRED_FORMAT_INDY = "indy"
+CRED_FORMAT_JSON_LD = "json-ld"
+
+@given('"{issuer}" is ready to issue a "{cred_format}" credential')
+def step_impl(context, issuer: str, cred_format: str = CRED_FORMAT_INDY):
+    if cred_format == CRED_FORMAT_INDY:
+        # Call legacy indy ready to issue credential step
+        context.execute_steps(f'''
+            Given '"{issuer}" is ready to issue a credential'
+        ''')
+    elif cred_format == CRED_FORMAT_JSON_LD:
+        issuer_url = context.config.userdata.get(issuer)
+
+        data = {
+            "did_method": context.did_method,
+            "proof_type": context.proof_type
+        }
+
+        (resp_status, resp_text) = agent_backchannel_POST(issuer_url + "/agent/command/", "issue-credential-v2", operation="prepare-json-ld", data=data)
+
+        assert resp_status == 200, f'issue-credential-v2/prepare-json-ld: resp_status {resp_status} is not 200; {resp_text}'
+        resp_json = json.loads(resp_text)
+
+        # TODO: it would be nice to not depend on the schema name for the issuer did dict
+        if 'issuer_did_dict' in context:
+            context.issuer_did_dict[context.schema['schema_name']] = resp_json["did"]
+        else:
+            context.issuer_did_dict = {context.schema['schema_name']: resp_json["did"]}
+    else:
+        raise Exception(f"Unknown credential format {cred_format}")
 
 @given('"{holder}" proposes a "{cred_format}" credential to "{issuer}" with {credential_data}')
 @when('"{holder}" proposes a "{cred_format}" credential to "{issuer}" with {credential_data}')
@@ -42,8 +72,15 @@ def step_impl(context, holder, cred_format, issuer, credential_data):
         cred_data = context.credential_data
 
     if "AIP20" in context.tags:
-        # This call may need to be formated by cred_format instead of version. Reassess when more types are used.
-        credential_offer = format_cred_proposal_by_aip_version(context, "AIP20", cred_data, context.connection_id_dict[holder][issuer], context.filters)
+        # We only want to send data for the cred format being used
+        assert cred_format in context.filters, f"credential data has no filter for cred format {cred_format}"
+        filters = {
+            cred_format: context.filters[cred_format]
+        }
+
+         # This call may need to be formated by cred_format instead of version. Reassess when more types are used.
+        credential_offer = format_cred_proposal_by_aip_version(
+            context, "AIP20", cred_data, context.connection_id_dict[holder][issuer], filters)
 
 
     (resp_status, resp_text) = agent_backchannel_POST(holder_url + "/agent/command/", "issue-credential-v2", operation="send-proposal", data=credential_offer)
@@ -68,7 +105,13 @@ def step_impl(context, issuer, cred_format):
         if "credential_data" in context:
             cred_data = context.credential_data
 
-        credential_offer = format_cred_proposal_by_aip_version(context, "AIP20", cred_data, context.connection_id_dict[issuer][context.holder_name], context.filters)
+        # We only want to send data for the cred format being used
+        assert cred_format in context.filters, f"credential data has no filter for cred format {cred_format}"
+        filters = {
+            cred_format: context.filters[cred_format]
+        }
+
+        credential_offer = format_cred_proposal_by_aip_version(context, "AIP20", cred_data, context.connection_id_dict[issuer][context.holder_name], filters)
 
         (resp_status, resp_text) = agent_backchannel_POST(issuer_url + "/agent/command/", "issue-credential-v2", operation="send-offer", data=credential_offer)
         assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
@@ -146,13 +189,15 @@ def step_impl(context, holder, cred_format):
     resp_json = json.loads(resp_text)
     assert resp_json["state"] == "done"
 
+    credential_id = resp_json[cred_format]["credential_id"]
+
     if 'credential_id_dict' in context:
         try:
-            context.credential_id_dict[context.schema['schema_name']].append(resp_json["cred_ex_record"]["cred_id_stored"])
+            context.credential_id_dict[context.schema['schema_name']].append(credential_id)
         except KeyError:
-            context.credential_id_dict[context.schema['schema_name']] = [resp_json["cred_ex_record"]["cred_id_stored"]]
+            context.credential_id_dict[context.schema['schema_name']] = [credential_id]
     else:
-        context.credential_id_dict = {context.schema['schema_name']: [resp_json["cred_ex_record"]["cred_id_stored"]]}
+        context.credential_id_dict = {context.schema['schema_name']: [credential_id]}
 
     # Verify issuer status
     # TODO This is returning none instead of Done. Should this be the case. Needs investigation.
@@ -174,12 +219,17 @@ def step_impl(context, holder, cred_format):
     holder_url = context.config.userdata.get(holder)
 
     # get the credential from the holders wallet
-    (resp_status, resp_text) = agent_backchannel_GET(holder_url + "/agent/command/", "credential", id=context.credential_id_dict[context.schema['schema_name']][len(context.credential_id_dict[context.schema['schema_name']])-1])
+    (resp_status, resp_text) = agent_backchannel_GET(holder_url + "/agent/command/", "credential", id=context.credential_id_dict[context.schema['schema_name']][-1])
     assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
     resp_json = json.loads(resp_text)
-    assert resp_json["referent"] == context.credential_id_dict[context.schema['schema_name']][len(context.credential_id_dict[context.schema['schema_name']])-1]
-    assert resp_json["schema_id"] == context.issuer_schema_id_dict[context.schema["schema_name"]]
-    assert resp_json["cred_def_id"] == context.credential_definition_id_dict[context.schema["schema_name"]]
+
+    if cred_format == CRED_FORMAT_INDY:
+        assert resp_json["schema_id"] == context.issuer_schema_id_dict[context.schema["schema_name"]]
+        assert resp_json["cred_def_id"] == context.credential_definition_id_dict[context.schema["schema_name"]]
+        assert resp_json["referent"] == context.credential_id_dict[context.schema['schema_name']][-1]
+    elif cred_format == CRED_FORMAT_JSON_LD:
+        # TODO: do not use schema name for credential_id_dict
+        assert resp_json["credential_id"] == context.credential_id_dict[context.schema['schema_name']][-1]
 
 @when('"{holder}" negotiates the offer with another proposal of the "{cred_format}" credential to "{issuer}"')
 def step_impl(context, holder, cred_format, issuer):

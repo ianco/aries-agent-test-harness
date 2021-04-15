@@ -433,6 +433,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             (resp_status, resp_text) = await self.admin_POST(agent_operation, data)
 
             log_msg(resp_status, resp_text)
+            resp_text = self.move_field_to_top_level(resp_text, "schema_id")
             return (resp_status, resp_text)
 
         elif op["topic"] == "credential-definition":
@@ -443,6 +444,7 @@ class AcaPyAgentBackchannel(AgentBackchannel):
             (resp_status, resp_text) = await self.admin_POST(agent_operation, data)
 
             log_msg(resp_status, resp_text)
+            resp_text = self.move_field_to_top_level(resp_text, "credential_definition_id")
             return (resp_status, resp_text)
 
         elif op["topic"] == "issue-credential":
@@ -626,22 +628,23 @@ class AcaPyAgentBackchannel(AgentBackchannel):
         log_msg(resp_status, resp_text)
         # Looks like all v2 states are RFC states. Yah!
         #if resp_status == 200: resp_text = self.agent_state_translation(topic], None, resp_text)
-        resp_text = self.move_state_to_top_level(resp_text)
+        resp_text = self.move_field_to_top_level(resp_text, "state")
         return (resp_status, resp_text)
 
-    def move_state_to_top_level(self, resp_text):
-        # for some responses the state is not a top level field. 
-        # the test harness expects the state to be a top level field
+    def move_field_to_top_level(self, resp_text, field_to_move):
+        # Some reponses have been changed to nest fields that were once at top level.
+        # The Test harness expects the these fields to be at the root. Other agents have it at the root.
+        # This could be removed if it is common acorss agents to nest these fields in `sent:` for instance.
         resp_json = json.loads(resp_text)
-        if "state" in resp_json:
+        if field_to_move in resp_json:
             # If it is already a top level field, forget about it.
             return resp_text
         else:
-            # Find the state and put a copy as a top level field
+            # Find the field and put a copy as a top level
             for key in resp_json:
-                if "state" in resp_json[key]:
-                    state = resp_json[key]["state"]
-                    resp_json["state"] = state
+                if field_to_move in resp_json[key]:
+                    field_value = resp_json[key][field_to_move]
+                    resp_json[field_to_move] = field_value
                     return json.dumps(resp_json)
 
     async def make_agent_GET_request(

@@ -31,3 +31,7 @@ _site/
 .jekyll-metadata
 .env
 Gemfile.lock
+
+env
+.python-version
+.vscode/settings.json

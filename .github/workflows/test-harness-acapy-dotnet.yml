@@ -12,9 +12,11 @@ name: test-harness-acapy-dotnet
 #
 # Current
 # 
-# All of the tests are currently running.
+# The majority of tests are running and passing. T013-HIPE0011 is failing due to the Aries Framework Dotnet not supporting
+# presentations containing a non-revocation interval, with a non-revocable credential. This issue is being tracked in 
+# https://github.com/hyperledger/aries-framework-dotnet/issues/184
 # 
-# *Status Note Updated: 2021.03.18*
+# *Status Note Updated: 2021.04.08*
 #
 # End
 on:

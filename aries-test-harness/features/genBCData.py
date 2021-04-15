@@ -3,12 +3,32 @@
 import csv
 import os.path
 import sys
+import urllib.request
 
-if ( (len(sys.argv) - 1 < 1) or ( not os.path.isfile(sys.argv[1]) ) ):
-    print("Error: Input file name saved from Google Sheet must be provided as a parameter and exist.")
-    exit(1)
 
-input = sys.argv[1]
+def download_sheet():
+    long_id = "1r40t6TRAoMrmDO7vM_o6eOmk6jvxUr189wZVNBcdgVs"
+    gid = "402169133"
+
+    csv_url = f"https://docs.google.com/spreadsheets/d/{long_id}/export?gid={gid}&format=csv&id={long_id}"
+    xlsx_url = f"https://docs.google.com/spreadsheets/d/{long_id}/export?format=xlsx&id={long_id}"
+
+    urllib.request.urlretrieve(xlsx_url, "./Mapping Aries Protocols for Testing - Aries Agent Test Scripts.xlsx")
+    urllib.request.urlretrieve(csv_url, "./Mapping Aries Protocols for Testing - Aries Agent Test Scripts.csv")
+
+# If filename provided use that
+if (len(sys.argv) - 1 >= 1):
+    if not os.path.isfile(sys.argv[1]):
+        print("Error: Input file name does not exist. Google Sheet must be provided as a parameter and exist.")
+        exit(1)
+
+    input = sys.argv[1]
+# Else download the public sheet
+else:
+    download_sheet()
+    input = "./Mapping Aries Protocols for Testing - Aries Agent Test Scripts.csv"
+
+
 rfc = None
 command_rows = {}
 fieldnames = None
@@ -49,7 +69,7 @@ with open(input, "r") as proto_file:
                     old_row[key] = new_row[key]
             command_rows[row_key] = old_row
 
-with open('../../aries-backchannel/data/backchannel_operations.csv', 'w') as command_file:
+with open('../../aries-backchannels/data/backchannel_operations.csv', 'w') as command_file:
     writer = csv.DictWriter(command_file, fieldnames=fieldnames)
     writer.writeheader()
     for key, val in command_rows.items():

@@ -315,6 +315,57 @@ Feature: RFC 0183 Aries agent credential revocation and revocation notification
          | issuer | credential_data   | request_for_proof        | presentation            |
          | Acme   | Data_DL_MaxValues | proof_request_DL_address | presentation_DL_address |
 
+   @T012-HIPE0011 @normal @AcceptanceTest @Schema_DriversLicense_Revoc
+   Scenario Outline: Revocable Credential not revoked and Holder attempts to prove without a non-revocation interval
+      Given "2" agents
+         | name  | role     |
+         | Bob   | prover   |
+         | Faber | verifier |
+      And "Faber" and "Bob" have an existing connection
+      And "Bob" has an issued credential from <issuer> with <credential_data>
+      When "Faber" sends a <request_for_proof> presentation to "Bob"
+      And "Bob" makes the <presentation> of the proof
+      And "Faber" acknowledges the proof
+      Then "Bob" has the proof verified
+
+      Examples:
+         | issuer | credential_data   | request_for_proof              | presentation                  |
+         | Acme   | Data_DL_MaxValues | proof_request_DL_revoc_address | presentation_DL_revoc_address |
+
+   @T013-HIPE0011 @normal @AcceptanceTest @Schema_DriversLicense @Indy @MobileTest
+   Scenario Outline: Non-revocable Credential, not revoked, and holder proves claims with the credential with timesstamp
+      Given "2" agents
+         | name  | role     |
+         | Bob   | prover   |
+         | Faber | verifier |
+      And "Faber" and "Bob" have an existing connection
+      And "Bob" has an issued credential from <issuer> with <credential_data>
+      When "Faber" sends a <request_for_proof> presentation to "Bob" with credential validity during <timeframe>
+      And "Bob" makes the <presentation> of the proof
+      And "Faber" acknowledges the proof
+      Then "Bob" has the proof verified
+
+      Examples:
+         | issuer | credential_data   | timeframe | request_for_proof        | presentation                 |
+         | Acme   | Data_DL_MinValues | now:now   | proof_request_DL_address | presentation_DL_address_w_ts |
+
+   @T014-HIPE0011 @normal @AcceptanceTest @Schema_DriversLicense_Revoc @Indy
+   Scenario Outline: Revocable Credential, not revoked, and holder proves claims with the credential with timesstamp
+      Given "2" agents
+         | name  | role     |
+         | Bob   | prover   |
+         | Faber | verifier |
+      And "Faber" and "Bob" have an existing connection
+      And "Bob" has an issued credential from <issuer> with <credential_data>
+      When "Faber" sends a <request_for_proof> presentation to "Bob" with credential validity during <timeframe>
+      And "Bob" makes the <presentation> of the proof
+      And "Faber" acknowledges the proof
+      Then "Bob" has the proof verified
+
+      Examples:
+         | issuer | credential_data   | timeframe | request_for_proof              | presentation                       |
+         | Acme   | Data_DL_MinValues | now:now   | proof_request_DL_revoc_address | presentation_DL_revoc_address_w_ts |
+
 
    @T001-RFC0183 @RFC0183 @wip @AcceptanceTest @Schema_DriversLicense_Revoc @NeedsReview
    Scenario Outline: Issuer revokes a credential and then sends notification
