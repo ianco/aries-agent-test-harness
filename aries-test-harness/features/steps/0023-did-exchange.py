@@ -178,6 +178,7 @@ def step_impl(context, responder):
 def step_impl(context, requester):
 
     data = context.responder_invitation
+    print("Invitation:", data)
     (resp_status, resp_text) = agent_backchannel_POST(context.requester_url + "/agent/command/", "out-of-band", operation="receive-invitation", data=data)
     assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
 

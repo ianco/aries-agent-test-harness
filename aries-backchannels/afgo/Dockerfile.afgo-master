@@ -15,12 +15,21 @@ RUN apk add --no-cache \
     libtool \
     bash \
     make;
+
+ENV PYTHONUNBUFFERED=1
+RUN apk add --update --no-cache python3 && ln -sf python3 /usr/bin/python
+RUN apk add --update --no-cache python3-dev
+RUN python3 -m ensurepip
+RUN pip3 install --no-cache --upgrade pip setuptools
+
 ADD . $GOPATH/src/github.com/hyperledger
 WORKDIR $GOPATH/src/github.com/hyperledger
 ENV EXECUTABLES go git
 
-RUN git clone https://github.com/hyperledger/aries-framework-go.git
+#RUN git clone https://github.com/hyperledger/aries-framework-go.git
+RUN git clone https://github.com/ianco/aries-framework-go.git
 WORKDIR $GOPATH/src/github.com/hyperledger/aries-framework-go
+RUN git checkout afgo_testing
 
 FROM golang as aries-framework
 ARG GO_TAGS=
@@ -30,12 +39,6 @@ RUN GO_TAGS=${GO_TAGS} GOPROXY=${GOPROXY} make agent-rest
 #
 # Install the test harness backchannel
 #
-
-ENV PYTHONUNBUFFERED=1
-RUN apk add --update --no-cache python3 && ln -sf python3 /usr/bin/python
-RUN apk add --update --no-cache python3-dev
-RUN python3 -m ensurepip
-RUN pip3 install --no-cache --upgrade pip setuptools
 
 RUN mkdir -p $GOPATH/aries-backchannels
 WORKDIR $GOPATH/aries-backchannels
