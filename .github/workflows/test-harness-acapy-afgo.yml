@@ -1,4 +1,4 @@
-name: test-harness-acapy-dotnet
+name: test-harness-acapy-afgo
 # RUNSET_NAME: "ACA-PY to AF-Go"
 # Scope: pre-AIP 2.0
 # Exceptions: None
@@ -41,7 +41,7 @@ jobs:
         uses: ./test-harness/actions/run-test-harness-wo-reports
         with:
           BUILD_AGENTS: "-a acapy-main -a afgo-master"
-          TEST_AGENTS: "-d acapy-main -b afgo-main"
+          TEST_AGENTS: "-d acapy-main -b afgo-master"
           OTHER_PARAMS: "-v 20"
           TEST_SCOPE: "-t @RFC0023 -t ~@wip -t ~@T003-RFC0023 -t ~@T004-RFC0023"
           REPORT_PROJECT: acapy-b-afgo
