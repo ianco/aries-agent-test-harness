@@ -71,7 +71,7 @@ rfc,command,response,topic,method,operation,id,data,description,id_details,data_
     ""credential_id"": ""issue-credential exchange id string""
 }",cred_exchange_id
 0453 Issue Credential v2,X,,issue-credential-v2,POST,prepare-json-ld,,Y,Prepare for issuing a JSON-LD credential,,"data = { ""did_method"": ""key"", ""key_type"": ""ed25519"" }",did
-0453 Issue Credential,X,,issue-credential-v2,POST,send-proposal,,Y,Send a credential proposal,,"proposal = {
+0453 Issue Credential v2,X,,issue-credential-v2,POST,send-proposal,,Y,Send a credential proposal,,"proposal = {
    ""connection_id"":""d71cd2f1-f075-4083-9b63-73f507813836"",
    ""credential_preview"":{
       ""@type"":""did:sov:BzCbsNYhMrjHiqZDTUASHg;spec/issue-credential/1.0/credential-preview"",
@@ -179,6 +179,11 @@ rfc,command,response,topic,method,operation,id,data,description,id_details,data_
 0037 Present Proof,X,,proof,POST,verify-presentation,Y,,Verify a received proof presentation,pres_exchange_id,,status
 0037 Present Proof,X,,proof,POST,create-send-connectionless-request,,Y,Send a proof request in reference to a proposal,,proposal,pres_exchange_id
 0037 Present Proof,X,,proof,GET,,Y,,Get a stored presentation from the wallet ,presentation_id,,presentation
-0036 Present Proof,X,,proof,GET,,Y,,Fetch a specific credential by ID ,presentation_exchange_id,,presentation_exchange_id
+0037 Present Proof,X,,proof,GET,,Y,,Fetch a specific credential by ID ,presentation_exchange_id,,presentation_exchange_id
 0037 Present Proof,X,,proof,POST,create-send-connectionless-request,,Y,Send a proof request in reference to a proposal,,proposal,pres_exchange_id
-
+0454 Present Proof v2,X,,proof-v2,POST,create-send-connectionless-request,,Y,Send a proof request created without an agent to agent connection,,presentation_proposal,"status, thread_id, pres_exchange_id"
+0454 Present Proof v2,X,,proof-v2,POST,send-request,,Y,Send a proof request without a proposal command,,"presentation_proposal, connection_id","status, thread_id, pres_exchange_id"
+0454 Present Proof v2,,X,proof-v2,GET,,Y,,Get a stored presentation from the wallet ,presentation_thread_id,,"status, presentation"
+0454 Present Proof v2,X,,proof-v2,POST,send-request,Y,,Send a proof request in response to a proposal,presentation_thread_id,,status
+0454 Present Proof v2,X,,proof-v2,POST,send-presentation,Y,Y,Send a proof presentation,presentation_thread_id,presentation,state
+0454 Present Proof v2,X,,proof-v2,POST,verify-presentation,Y,,Verify a received proof presentation,presentation_thread_id,,state

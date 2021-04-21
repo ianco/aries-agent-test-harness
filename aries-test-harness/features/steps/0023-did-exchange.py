@@ -191,7 +191,8 @@ def step_impl(context, requester):
     if requester not in context.connection_id_dict:
         context.connection_id_dict[requester] = {}
 
-    context.connection_id_dict[requester] = {context.responder_name: resp_json["connection_id"]}
+    #context.connection_id_dict[requester] = {context.responder_name: resp_json["connection_id"]}
+    context.connection_id_dict[requester][context.responder_name] = resp_json["connection_id"]
 
 
 @when('"{requester}" sends the request to "{responder}"')

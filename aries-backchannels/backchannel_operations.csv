@@ -178,5 +178,11 @@ rfc,command,response,topic,method,operation,id,data,description,id_details,data_
 0037 Present Proof,X,,proof,POST,verify-presentation,Y,,Verify a received proof presentation,pres_exchange_id,,status
 0037 Present Proof,X,,proof,POST,create-send-connectionless-request,,Y,Send a proof request in reference to a proposal,,proposal,pres_exchange_id
 0037 Present Proof,X,,proof,GET,,Y,,Get a stored presentation from the wallet ,presentation_id,,presentation
-0036 Present Proof,X,,proof,GET,,Y,,Fetch a specific credential by ID ,presentation_exchange_id,,presentation_exchange_id
+0037 Present Proof,X,,proof,GET,,Y,,Fetch a specific credential by ID ,presentation_exchange_id,,presentation_exchange_id
 0037 Present Proof,X,,proof,POST,create-send-connectionless-request,,Y,Send a proof request in reference to a proposal,,proposal,pres_exchange_id
+0454 Present Proof v2,X,,proof-v2,POST,create-send-connectionless-request,,Y,Send a proof request created without an agent to agent connection,,presentation_proposal,"state, thread_id, pres_exchange_id"
+0454 Present Proof v2,X,,proof-v2,POST,send-request,,Y,Send a proof request without a proposal command,,"presentation_proposal, connection_id","state, thread_id, pres_exchange_id"
+0454 Present Proof v2,,X,proof-v2,GET,,Y,,Get a stored presentation from the wallet ,presentation_thread_id,,"state, presentation"
+0454 Present Proof v2,X,,proof-v2,POST,send-request,Y,,Send a proof request in response to a proposal,presentation_thread_id,,state
+0454 Present Proof v2,X,,proof-v2,POST,send-presentation,Y,Y,Send a proof presentation,presentation_thread_id,presentation,state
+0454 Present Proof v2,X,,proof-v2,POST,verify-presentation,Y,,Verify a received proof presentation,presentation_thread_id,,state

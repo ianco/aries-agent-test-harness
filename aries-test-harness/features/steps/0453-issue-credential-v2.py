@@ -189,7 +189,8 @@ def step_impl(context, holder, cred_format):
     resp_json = json.loads(resp_text)
     assert resp_json["state"] == "done"
 
-    credential_id = resp_json[cred_format]["credential_id"]
+    #credential_id = resp_json[cred_format]["credential_id"]
+    credential_id = resp_json["cred_ex_record"]["cred_id_stored"]
 
     if 'credential_id_dict' in context:
         try:
