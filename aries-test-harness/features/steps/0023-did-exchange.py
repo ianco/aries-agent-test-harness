@@ -210,6 +210,8 @@ def step_impl(context, requester, responder):
 def step_impl(context, responder):
     responder_url = context.config.userdata.get(responder)
 
+    print("Connection id context:", context.requester_name, context.connection_id_dict[responder])
+
     # If the connection id dict is not populated for the responder to requester relationship, it means the agent in use doesn't 
     # support giving the responders connection_id before the send-request
     # Make a call to the responder for the connection id and add it to the collection
@@ -220,6 +222,8 @@ def step_impl(context, responder):
         (resp_status, resp_text) = agent_backchannel_GET(responder_url + "/agent/response/", "did-exchange", id=invitation_id) # {}
         assert resp_status == 200, f'resp_status {resp_status} is not 200; {resp_text}'
         resp_json = json.loads(resp_text)
+
+        print("did exchange response:", resp_json)
 
         # The second way to do this is to call the connection protocol for the connection id given the invitation_id or a thread id.
         # This method is disabled for now, will be enabled if afgo can't get the connection id for the webhook above. 
@@ -244,7 +248,7 @@ def step_impl(context, responder):
     responder_connection_id = context.connection_id_dict[responder][context.requester_name]
 
     # responder already recieved the connection request in the send-request call so get connection and verify status.
-    assert expected_agent_state(responder_url, "did-exchange", responder_connection_id, "request-received")
+    assert expected_agent_state(responder_url, "did-exchange", responder_connection_id, "request-received", wait_time=5.0)
 
 
 
@@ -275,7 +279,7 @@ def step_impl(context, requester):
 
     # This should be response-received but is completed. Chat with SKlump on this issue.
     #assert expected_agent_state(context.requester_url, "connection", requester_connection_id, "completed")
-    assert expected_agent_state(context.requester_url, "did-exchange", requester_connection_id, "completed")
+    assert expected_agent_state(context.requester_url, "did-exchange", requester_connection_id, "completed", wait_time=5.0)
 
 
 @when('"{requester}" sends complete to "{responder}"')
