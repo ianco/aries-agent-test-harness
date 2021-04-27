@@ -1,0 +1,86 @@
+version: "3"
+services:
+    acme_agent:
+        image: acapy-main-agent-backchannel
+        environment:
+            - DOCKERHOST=host.docker.internal
+            - AGENT_NAME=Acme_Agent
+            - LEDGER_URL=http://host.docker.internal:9000
+            - TAILS_SERVER_URL=http://host.docker.internal:6543
+            - AIP_CONFIG=20
+        command: -p 9010 -i false
+        networks:
+            - aath_net
+        ports:
+            - "9010-9019:9010-9019"
+
+    bob_agent:
+        image: acapy-main-agent-backchannel
+        environment:
+            - DOCKERHOST=host.docker.internal
+            - AGENT_NAME=Bob_Agent
+            - LEDGER_URL=http://host.docker.internal:9000
+            - TAILS_SERVER_URL=http://host.docker.internal:6543
+            - AIP_CONFIG=20
+        command: -p 9020 -i false
+        networks:
+            - aath_net
+        ports:
+            - "9020-9029:9020-9029"
+
+    faber_agent:
+        image: afgo-master-agent-backchannel
+        environment:
+            - DOCKERHOST=host.docker.internal
+            - AGENT_NAME=Faber_Agent
+            - LEDGER_URL=http://host.docker.internal:9000
+            - TAILS_SERVER_URL=http://host.docker.internal:6543
+            - AIP_CONFIG=20
+        command: -p 9030 -i false
+        networks:
+            - aath_net
+        ports:
+            - "9030-9039:9030-9039"
+
+    alice_agent:
+        image: afgo-master-agent-backchannel
+        environment:
+            - DOCKERHOST=host.docker.internal
+            - AGENT_NAME=Alice_Agent
+            - LEDGER_URL=http://host.docker.internal:9000
+            - TAILS_SERVER_URL=http://host.docker.internal:6543
+            - AIP_CONFIG=20
+        command: -p 9040 -i false
+        networks:
+            - aath_net
+        ports:
+            - "9040-9049:9040-9049"
+
+    faber_openapi_demo:
+        container_name: faber_openapi_demo
+        image: swaggerapi/swagger-ui
+        environment:
+            - SWAGGER_JSON=/specs/openapi-afgo-faber.yml
+            - BASE_URL=/openapi
+        ports:
+            - 9080:8080
+        volumes:
+            - ./specs:/specs
+        networks:
+            - aath_net
+
+    alice_openapi_demo:
+        container_name: alice_openapi_demo
+        image: swaggerapi/swagger-ui
+        environment:
+            - SWAGGER_JSON=/specs/openapi-afgo-alice.yml
+            - BASE_URL=/openapi
+        ports:
+            - 9090:8080
+        volumes:
+            - ./specs:/specs
+        networks:
+            - aath_net
+
+networks:
+  aath_net:
