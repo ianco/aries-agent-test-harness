@@ -23,3 +23,27 @@ When the agents are running you have access to the following URLs and ports:
 | Bob   | acapy-main  | 9020             | http://localhost:9022/api/doc |
 | Faber | afgo-master | 9030             | http://localhost:9080/openapi |
 | Alice | afgo-master | 9040             | http://localhost:9090/openapi |
+
+## DID Exchange Connection - afgo-master
+
+1. Generate Invitation
+
+   - 
+
+2. Receive Invitation
+
+3. Make Connection Request
+
+4. Accept Connection Request
+
+
+## DID Exchange Connection - acapy-main
+
+1. Generate Invitation
+
+2. Receive Invitation
+
+3. Make Connection Request
+
+4. Accept Connection Request
+
