@@ -21,6 +21,6 @@ jobs:
         uses: peter-evans/create-pull-request@v3
         with:
           path: test-harness
-          committer: ian@anon-solutions.ca
+          committer: "Ian Costanzo <ian@anon-solutions.ca>"
           signoff: "Ian Costanzo ian@anon-solutions.ca"
           branch: aath-summary-results
