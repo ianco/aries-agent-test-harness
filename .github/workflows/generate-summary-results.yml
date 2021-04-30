@@ -17,3 +17,9 @@ jobs:
           path: test-harness
       - name: generate-summary-results
         uses: ./test-harness/actions/run-summary-results
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          committer: ian@anon-solutions.ca
+          signoff: Signed-off-by: Ian Costanzo ian@anon-solutions.ca
+          branch: aath-summary-results
