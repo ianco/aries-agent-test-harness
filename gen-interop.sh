@@ -216,7 +216,7 @@ for file in ${workflows}; do
     if [ ${machine} == 'Mac' ]; then
         ALLURE_DATE[$count]=$( date -j -f %s ${epoch_seconds} )
     else
-        ALLURE_DATE[$count]=$( date -d${epoch_seconds} )
+        ALLURE_DATE[$count]=$( date -d@${epoch_seconds} )
     fi
 
     count=$(expr ${count} + 1)
