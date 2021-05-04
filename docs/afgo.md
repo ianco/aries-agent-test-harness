@@ -6,7 +6,7 @@
 | ------ | :--------------: | :-------------: | :----------------: | :-----------------: | ----- | :-----: | 
 | [acapy-afgo](#runset-acapy-afgo) | acapy-main<br>0.6.0 | afgo-master<br>unknown | acapy-main<br>0.6.0 | acapy-main<br>0.6.0 | pre-AIP 2.0 | [**0 / 5<br>0%**](https://allure.vonx.io/api/allure-docker-service/projects/acapy-b-afgo/reports/latest/index.html?redirect=false#behaviors) |
 | [afgo-acapy](#runset-afgo-acapy) | afgo-master<br>unknown | acapy-main<br>0.6.0 | afgo-master<br>unknown | afgo-master<br>unknown | pre-AIP 2.0 | [**0 / 5<br>0%**](https://allure.vonx.io/api/allure-docker-service/projects/afgo-b-acapy/reports/latest/index.html?redirect=false#behaviors) |
-| [afgo](#runset-afgo) | afgo-master<br>unknown | afgo-master<br>unknown | afgo-master<br>unknown | afgo-master<br>unknown | pre-AIP 2.0 | [**3 / 5<br>60%**](https://allure.vonx.io/api/allure-docker-service/projects/afgo/reports/latest/index.html?redirect=false#behaviors) |
+| [afgo](#runset-afgo) | afgo-master<br>unknown | afgo-master<br>unknown | afgo-master<br>unknown | afgo-master<br>unknown | pre-AIP 2.0 | [**3 / 3<br>100%**](https://allure.vonx.io/api/allure-docker-service/projects/afgo/reports/latest/index.html?redirect=false#behaviors) |
 
 ## Runset Notes
 
@@ -18,7 +18,7 @@ Runset Name: ACA-PY to AF-Go
 **Latest results: 0 out of 5 (0%)**
 
 
-*Last run: Wed Mar 17 17:08:11 PDT 2021*
+*Last run: Tue May  4 01:22:16 UTC 2021*
 ```
 
 #### Current Runset Status
@@ -42,7 +42,7 @@ Runset Name: AF-Go to ACA-PY
 **Latest results: 0 out of 5 (0%)**
 
 
-*Last run: Thu Mar 18 13:38:27 PDT 2021*
+*Last run: Tue May  4 01:54:33 UTC 2021*
 ```
 
 #### Current Runset Status
@@ -63,10 +63,10 @@ One might be in the test suite, while two others appear to be in the Aries Frame
 Runset Name: AF-Go to AF-Go
 
 ```tip
-**Latest results: 3 out of 5 (60%)**
+**Latest results: 3 out of 3 (100%)**
 
 
-*Last run: Wed Mar 17 17:44:15 PDT 2021*
+*Last run: Tue May  4 01:54:47 UTC 2021*
 ```
 
 #### Current Runset Status
