@@ -36,7 +36,7 @@
   "devDependencies": {
     "@types/express": "4.17.13",
     "@types/minimist": "^1.2.0",
-    "@types/node": "14.14.28",
+    "@types/node": "14.18.63",
     "@types/node-fetch": "^2.6.3",
     "nodemon": "2.0.14",
     "prettier": "^2.4.1",
