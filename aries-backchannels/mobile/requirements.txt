@@ -1,1 +1,1 @@
-qrcode[pil]~=6.1
+qrcode[pil]~=8.0
