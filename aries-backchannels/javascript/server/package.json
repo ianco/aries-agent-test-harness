@@ -26,7 +26,7 @@
     "@tsed/exceptions": "6.75.4",
     "@tsed/platform-express": "6.75.4",
     "@tsed/swagger": "^6.88.0",
-    "body-parser": "1.19.0",
+    "body-parser": "1.20.3",
     "cross-env": "7.0.3",
     "express": "^4.17.1",
     "minimist": "^1.2.5",
