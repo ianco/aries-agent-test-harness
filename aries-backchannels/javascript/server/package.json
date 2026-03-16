@@ -17,7 +17,7 @@
     "@aries-framework/core": "alpha",
     "@aries-framework/indy-vdr": "alpha",
     "@aries-framework/node": "alpha",
-    "@hyperledger/anoncreds-nodejs": "^0.1.0-dev.11",
+    "@hyperledger/anoncreds-nodejs": "^0.2.4",
     "@hyperledger/aries-askar-nodejs": "^0.1.0-dev.6",
     "@hyperledger/indy-vdr-nodejs": "^0.1.0-dev.12",
     "@tsed/common": "6.75.4",
