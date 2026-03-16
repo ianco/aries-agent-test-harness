@@ -23,7 +23,7 @@
     "@tsed/common": "6.75.4",
     "@tsed/core": "6.75.4",
     "@tsed/di": "6.75.4",
-    "@tsed/exceptions": "6.75.4",
+    "@tsed/exceptions": "6.133.2",
     "@tsed/platform-express": "6.75.4",
     "@tsed/swagger": "^6.88.0",
     "body-parser": "1.19.0",
