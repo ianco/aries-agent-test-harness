@@ -1,0 +1,57 @@
+# Run only the present-proof v2 BBS+ (BbsBlsSignature2020) + did:key scenarios
+# that were failing with HTTP 500 on verify-presentation. Uses BCovrin test
+# ledger so no local von-network or tails server is needed.
+#
+# Trigger: manually from Actions tab, or on push/PR to any branch (including feature branches).
+name: test-harness-acapy-bbs-present-proof
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/test-harness-acapy-bbs-present-proof.yml'
+      - 'aries-test-harness/features/0454-present-proof-v2.feature'
+      - 'aries-test-harness/features/steps/0454-present-proof-v2-v3.py'
+  pull_request:
+    paths:
+      - '.github/workflows/test-harness-acapy-bbs-present-proof.yml'
+      - 'aries-test-harness/features/0454-present-proof-v2.feature'
+      - 'aries-test-harness/features/steps/0454-present-proof-v2-v3.py'
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test-bbs-present-proof:
+    runs-on: ubuntu-latest
+    env:
+      LEDGER_URL_CONFIG: "https://test.bcovrin.vonx.io"
+      GENESIS_URL: "https://test.bcovrin.vonx.io/genesis"
+      TAILS_SERVER_URL_CONFIG: "https://tails.vonx.io"
+      LOG_LEVEL: "INFO"
+    steps:
+      - name: Checkout test harness
+        uses: actions/checkout@v4
+        with:
+          path: test-harness
+
+      - name: Run BBS+ present-proof scenarios (BCovrin test ledger)
+        id: run_test
+        uses: ./test-harness/actions/run-test-harness-wo-reports
+        with:
+          BUILD_AGENTS: "-a acapy-main"
+          TEST_AGENTS: "-d acapy-main"
+          TEST_SCOPE: "-t @RFC0454 -t @CredFormat_JSON-LD -t @ProofType_BbsBlsSignature2020 -t @DidMethod_key -t @DIDExchangeConnection"
+          REPORT_PROJECT: acapy-bbs-present-proof
+          REPORTING: ""
+          OTHER_PARAMS: ""
+
+      - name: Upload agent logs (faber_agent.log, bob_agent.log, etc.)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bbs-present-proof-agent-logs
+          path: test-harness/.logs/
+          retention-days: 14
+          if-no-files-found: warn
